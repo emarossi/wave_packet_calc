@@ -4,4 +4,5 @@ The code calculates the coherences and populations of the density matrix expande
 The dynamical state created by the interaction with the light-pulse is expanded in terms of the ground-state, the core-excited and the valence-excited states of the molecule.
 The molecular properties (i.e. transition energies, transition dipole moments and polarizabilities), are obtained from Qchem 6.1.
 The code takes as input Qchem's output file, using the molecular properties to calculate the transition amplitudes relative to the core-excited (i.e. first order TDPT), the ground and valence-excited states (i.e. second order TDPT). The transition amplitudes are then used to build the time-dependent density matrix representing the dynamical state.
-The code a two-color pulse formed by two gaussian pulses with a wide range of freely and independently regulable setting for each color. These include: pulse irradiance, central frequency, bandwdith/duration, polarization, time-delay.
+The code a two-color pulse formed by two gaussian pulses with a wide range of freely and independently regulable setting for each color. These include: pulse irradiance, central frequency, bandwdith/duration, polarization, time-delay. 
+Introducing a new line.
