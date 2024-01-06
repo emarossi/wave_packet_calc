@@ -526,6 +526,7 @@ def gauss_freq_2D(omega,omega_carrier,time_shift,sigma,amplitude,pol_v):
 #Irradiance in W/cm^2 is multiplied by 1e4 and divided by the a.u. of Irradiance->Irradiance in a.u. is obtained
 #Epsilon_0 in a.u. is obtained by dividing its value in F/m by the unit of a.u. of permittivity in F/m.
 #The formula for the electric field is applied, obtaining the value of |E_0| in a.u.
+#The convention used for the 
 
 irradiance_W_cm2 = 1e18 #W/cm^2
 irradiance_W_m2_au = 6.43641e19 #(W/m^2)/a.u. From https://en.wikipedia.org/wiki/Hartree_atomic_units
