@@ -442,20 +442,45 @@ dip_array = (np.concatenate((np.concatenate((A_dip_array,B_dip_array),axis=1),np
 #2-PHOTON - BUILDING REXS and RIXS TENSORS
 ###########################################
 
+def RIXS_interpolation(RIXS_list,pump_list,new_pump_array,process):
+
+    global index_ab  #importing the index_ab
+
+    #REXS process: the tensor has a shape (#omega_p,3,3). Interpolation along the axis=0.
+    if process == 'REXS':
+        real_part = sp.interpolate.CubicSpline(np.array(pump_list),np.array(RIXS_list,dtype='complex64').reshape((len(pump_list),3,3)).real,axis=0)
+        imag_part = sp.interpolate.CubicSpline(np.array(pump_list),np.array(RIXS_list,dtype='complex64').reshape((len(pump_list),3,3)).imag,axis=0)
+    
+    #RIXS process: the tensor has a shape (#VE_states,#omega_p,3,3). Interpolation along the axis=1.
+    elif process == 'RIXS':
+        real_part = sp.interpolate.CubicSpline(np.array(pump_list),np.array(RIXS_list,dtype='complex64').reshape((len(index_ab)-1,len(pump_l),3,3)).real,axis=1)
+        imag_part = sp.interpolate.CubicSpline(np.array(pump_list),np.array(RIXS_list,dtype='complex64').reshape((len(index_ab)-1,len(pump_l),3,3)).imag,axis=1)
+
+    #Putting together the real and imaginary parts of the tensors.
+    return(np.vectorize(complex)(real_part(new_pump_array),imag_part(new_pump_array)))
+
 #The REXS arrays are broadcasted to => (#omega_p,#omega_p,3,3)
 #The RIXS arrays are broadcasted to => (#AB_transitions,#omega_p,#omega_p,3,3)
 #The pump_grid has shape => (#omega_p,#omega_p). The dump grid is pump_grid only transposed.
 
-AA_a = np.broadcast_to(np.array(AA,dtype='complex64').reshape((len(pump_l),3,3)),(len(pump_l),len(pump_l),3,3))
+#Defintion of the pump array to be used for calculations (i.e. more points than the Qchem's output)
+dim = 1440
+pump_array = np.linspace(min(pump_l),max(pump_l),dim)
+
+#REXS tensor - output of the new REXS vector from the interpolation function and broadcast
+AA_a = np.broadcast_to(RIXS_interpolation(AA,pump_l,pump_array,'REXS'),(dim,dim,3,3))
+
+#RIXS tensor - output of the new RIXS tensor from the interpolation function, broadcast and averaging
 
 #right and left calculation
-AB_a = np.broadcast_to(np.array(AB,dtype='complex64').reshape((len(index_ab)-1,len(pump_l),3,3))[:,np.newaxis,:,:,:],(len(index_ab)-1,len(pump_l),len(pump_l),3,3))
-BA_a = np.broadcast_to(np.array(BA,dtype='complex64').reshape((len(index_ab)-1,len(pump_l),3,3))[:,np.newaxis,:,:,:],(len(index_ab)-1,len(pump_l),len(pump_l),3,3))
+AB_a = np.broadcast_to(RIXS_interpolation(AB,pump_l,pump_array,'RIXS')[:,np.newaxis,:,:,:],(len(index_ab)-1,dim,dim,3,3))
+BA_a = np.broadcast_to(RIXS_interpolation(BA,pump_l,pump_array,'RIXS')[:,np.newaxis,:,:,:],(len(index_ab)-1,dim,dim,3,3))
 
 #averaged calculation (averaging between right and left states)
 AB_avg_a = (np.array(AB_a)+np.conjugate(np.array(BA_a)))/2
 
-pump_grid = np.broadcast_to(np.array(pump_l),(len(pump_l),len(pump_l)))
+#Creation of the pump grid starting from the pump array
+pump_grid = np.broadcast_to(pump_array,(dim,dim))
 dump_grid = pump_grid.transpose()
 
 #For 2D calculations - temporary
@@ -470,9 +495,10 @@ dump_grid = pump_grid.transpose()
 #Building the RIXS tensor containing all the RIXS and REXS tensors
 #RIXS_TM.shape = (state_A,state_B,#omega_p,#omega_d,3,3)
 
+#Putting together the full RIXS tensor
 #For 1D calculations
 
-RIXS_TM = np.zeros((num_val_states,num_val_states,len(pump_l),len(pump_l),3,3),dtype='complex64')
+RIXS_TM = np.zeros((num_val_states,num_val_states,dim,dim,3,3),dtype='complex64')
 
 #Right and left tensors
 # for index,(row,col) in enumerate(index_ab):
@@ -495,7 +521,6 @@ for index,(row,col) in enumerate(index_ab):
         RIXS_TM[0,index,...] = AB_avg_a[index-1,...]
         
         RIXS_TM[index,0,...] = np.conjugate(AB_avg_a[index-1,...])
-
 
 ##################
 #PULSE DEFINITION 
