@@ -4,11 +4,8 @@ import multiprocessing as mp
 import cmath,math,time
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy
+import scipy as sp
 import itertools
-import scipy.constants as constants
-import scipy.integrate as integrate
-import scipy.special as special
 import numexpr as ne
 #import cupy as cp
 import sys
@@ -20,7 +17,8 @@ print(f'pol_d {sys.argv[5]} {sys.argv[6]} {sys.argv[7]}')
 print(f'pump_carrier {sys.argv[8]}')
 print(f'dump_carrier {sys.argv[9]}')
 print(f'bandwidth {sys.argv[10]}')
-print(f'storing result in filename: {sys.argv[11]}')
+print(f'grid dimension (#points) {sys.argv[11]}')
+print(f'storing result in filename: {sys.argv[12]}')
 
 ###############################
 #DEFINITION OF INPUT VARIABLES
@@ -52,13 +50,15 @@ else:
 print(f'pol_p check {pol_p}')
 print(f'pol_d check {pol_d}')
 
-energy_1auE_eV = constants.physical_constants['hartree-electron volt relationship'][0]
+energy_1auE_eV = sp.constants.physical_constants['hartree-electron volt relationship'][0]
 
 pump_carrier = float(sys.argv[8])/energy_1auE_eV #229.73/     #input values in eV->converted to a.u.
 dump_carrier = float(sys.argv[9])/energy_1auE_eV #229.73/energy_1auE_eV
 bandwidth = float(sys.argv[10])/energy_1auE_eV # 8/energy_1auE_eV            #i
 
-outputfilename = sys.argv[11]
+dim = sys.argv[11]
+
+outputfilename = sys.argv[12]
 
 path_2P = ''
 file_2P = file
@@ -157,9 +157,9 @@ print('loading constants')
 # load constants
 #Definition of unit conversion constants
 
-time_1aut_s = constants.physical_constants['atomic unit of time'][0]
-planck_eV = constants.physical_constants['Planck constant in eV/Hz'][0]
-epsilon_0_au = constants.epsilon_0/constants.physical_constants['atomic unit of permittivity'][0]
+time_1aut_s = sp.constants.physical_constants['atomic unit of time'][0]
+planck_eV = sp.constants.physical_constants['Planck constant in eV/Hz'][0]
+epsilon_0_au = sp.constants.epsilon_0/sp.constants.physical_constants['atomic unit of permittivity'][0]
 
 def RIXS_TM_mod(row):
     
@@ -442,6 +442,9 @@ dip_array = (np.concatenate((np.concatenate((A_dip_array,B_dip_array),axis=1),np
 #2-PHOTON - BUILDING REXS and RIXS TENSORS
 ###########################################
 
+#Interpolation: the function takes the REXS/RIXS tensors from Qchem and interpolates them.
+#The interpolated function is used to generate a tensor on a new grid defined by 'new_pump_array'.
+
 def RIXS_interpolation(RIXS_list,pump_list,new_pump_array,process):
 
     global index_ab  #importing the index_ab
@@ -464,7 +467,6 @@ def RIXS_interpolation(RIXS_list,pump_list,new_pump_array,process):
 #The pump_grid has shape => (#omega_p,#omega_p). The dump grid is pump_grid only transposed.
 
 #Defintion of the pump array to be used for calculations (i.e. more points than the Qchem's output)
-dim = 1440
 pump_array = np.linspace(min(pump_l),max(pump_l),dim)
 
 #REXS tensor - output of the new REXS vector from the interpolation function and broadcast
@@ -691,7 +693,7 @@ freq_grid,time_grid = np.meshgrid(freq_array,time_array)
 #The t-dependent coefficients for each state are stored in an array of shape (#states,length_time_array)
 
 for state in range(num_val_states,num_val_states+num_core_states):
-    c[state,:] += schroedinger_p(time_array,en_array[0,state],decay_rate)*(integrate.trapz(integrand(pulse_1P,freq_grid,en_array[0,state],dip_array[0,state],decay_rate,time_grid),dx=step_freq,axis=1))
+    c[state,:] += schroedinger_p(time_array,en_array[0,state],decay_rate)*(sp.integrate.trapz(integrand(pulse_1P,freq_grid,en_array[0,state],dip_array[0,state],decay_rate,time_grid),dx=step_freq,axis=1))
 
 #######################
 #SRIXS WP COEFFICIENTS
@@ -746,9 +748,9 @@ def wp_calc_opt(time_array, index, low, up, f, f_prime, resonance):
         if index == 0:
             integrand_full[resonance[0],resonance[1]] = 0
         
-        correction = (-np.sum(((integrate.trapz(integrand_full[low[0],low[1]]*step_size/2, dx=step_size)*step_size)/2)
-            +((integrate.trapz(integrand_full[up[0],up[1]]*step_size/2, dx=step_size)*step_size)/2))
-            +f_prime*(math.sin(delta*time)/(delta*time))+complex(0,1)*(2*special.sici(delta*time)[0]+np.pi)*f)
+        correction = (-np.sum(((sp.integrate.trapz(integrand_full[low[0],low[1]]*step_size/2, dx=step_size)*step_size)/2)
+            +((sp.integrate.trapz(integrand_full[up[0],up[1]]*step_size/2, dx=step_size)*step_size)/2))
+            +f_prime*(math.sin(delta*time)/(delta*time))+complex(0,1)*(2*sp.special.sici(delta*time)[0]+np.pi)*f)
     
         integral_0 = step_size*step_size*np.sum(integrand_full)
         
@@ -796,9 +798,9 @@ def wp_calc_opt(time_array, index, low, up, f, f_prime, resonance):
 #        
 #        integrand_full = cp.asnumpy(gpu_integrand_full)
 #        
-#        correction.append(-np.sum(((integrate.trapz(integrand_full[low_nonull[0],low_nonull[1]]*step_size/2, dx=step_size)*step_size)/2)
-#                                  +((integrate.trapz(integrand_full[up_nonull[0],up_nonull[1]]*step_size/2, dx=step_size)*step_size)/2))
-#                                  +f_prime_x0*(math.sin(delta*time)/(delta*time))+complex(0,1)*(2*special.sici(delta*time)[0]+np.pi)*f_x0)       
+#        correction.append(-np.sum(((sp.integrate.trapz(integrand_full[low_nonull[0],low_nonull[1]]*step_size/2, dx=step_size)*step_size)/2)
+#                                  +((sp.integrate.trapz(integrand_full[up_nonull[0],up_nonull[1]]*step_size/2, dx=step_size)*step_size)/2))
+#                                  +f_prime_x0*(math.sin(delta*time)/(delta*time))+complex(0,1)*(2*sp.special.sici(delta*time)[0]+np.pi)*f_x0)       
 #    
 #        
 #        wp_coeff_g_nostrip.append(integral_0)
@@ -809,12 +811,6 @@ def wp_calc_opt(time_array, index, low, up, f, f_prime, resonance):
 #    # return(np.array(wp_coeff_g_nostrip+correction),np.array(wp_coeff_g_nostrip_cc+correction_cc))
   
 
-
-    
-
-
-
-
 grid_dim = pump_grid.shape[0]
 
 #Calculation of pulse_mom and energy_eq tensors 
@@ -823,7 +819,6 @@ print(en_array.shape)
 
 pulse_mom = np.einsum('ijpdxy,xypd->ijpd',RIXS_TM,pulse_matrix,optimize='optimal')
 energy_eq = np.broadcast_to(en_array[0:num_val_states,0:num_val_states,np.newaxis,np.newaxis],pulse_mom.shape)-np.broadcast_to(pump_grid[np.newaxis,np.newaxis,...],pulse_mom.shape)+np.broadcast_to(dump_grid[np.newaxis,np.newaxis,...],pulse_mom.shape)
-
 
 delta = 2.25e-2  #doesn't work with 1e-2
 # delta = 2e-2
@@ -891,11 +886,11 @@ def compute_strip_stats(index):
     
     #CALCULATION OF QUANTITIES RELATED TO THE PULSE-MOMENTUM PRODUCT. 
     #In the solution of the integral, it is necessary to integrate along the resonance line to find f(x0) and to consider the incremental ratio calculated based on the pulse-momentum product function.
-    f_x0 = integrate.trapz(pulse_mom[0,index,resonance_center[0],resonance_center[1]],dx=step_size)
-    # f_x0_cc = integrate.trapz(pulse_mom[index,0,resonance_center[0],resonance_center[1]],dx=step_size)
+    f_x0 = sp.integrate.trapz(pulse_mom[0,index,resonance_center[0],resonance_center[1]],dx=step_size)
+    # f_x0_cc = sp.integrate.trapz(pulse_mom[index,0,resonance_center[0],resonance_center[1]],dx=step_size)
     f_prime_x0_integrand = pulse_mom[0,index,up_nonull[0],up_nonull[1]]-pulse_mom[0,index,low_nonull[0],low_nonull[1]]
     # f_prime_x0_integrand_cc = pulse_mom[index,0,up_nonull[0],up_nonull[1]]-pulse_mom[index,0,low_nonull[0],low_nonull[1]]
-    f_prime_x0 = integrate.trapz(f_prime_x0_integrand,dx=step_size)
+    f_prime_x0 = sp.integrate.trapz(f_prime_x0_integrand,dx=step_size)
     
     return low_null, up_null, f_x0, f_prime_x0, resonance_strip
 
