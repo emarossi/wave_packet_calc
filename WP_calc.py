@@ -56,7 +56,7 @@ pump_carrier = float(sys.argv[8])/energy_1auE_eV #229.73/     #input values in e
 dump_carrier = float(sys.argv[9])/energy_1auE_eV #229.73/energy_1auE_eV
 bandwidth = float(sys.argv[10])/energy_1auE_eV # 8/energy_1auE_eV            #i
 
-dim = sys.argv[11]
+dim = int(sys.argv[11])
 
 outputfilename = sys.argv[12]
 
