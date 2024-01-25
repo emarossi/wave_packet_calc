@@ -760,7 +760,7 @@ def wp_calc_opt(time_array, index, low, up, f, f_prime, resonance):
     
         integral_0 = step_size*step_size*np.sum(integrand_full)   #0th order integration to save computational time
         
-        result[nr] = (-1/(2*np.pi))*(integral_0 + correction)
+        result[nr] = (1/(2*np.pi))*(integral_0 + correction)
         
     return result
     
