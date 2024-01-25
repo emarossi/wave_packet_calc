@@ -693,7 +693,7 @@ freq_grid,time_grid = np.meshgrid(freq_array,time_array)
 #The t-dependent coefficients for each state are stored in an array of shape (#states,length_time_array)
 
 for state in range(num_val_states,num_val_states+num_core_states):
-    c[state,:] += schroedinger_p(time_array,en_array[0,state],decay_rate)*(sp.integrate.trapz(integrand(pulse_1P,freq_grid,en_array[0,state],dip_array[0,state],decay_rate,time_grid),dx=step_freq,axis=1))
+    c[state,:] += schroedinger_p(time_array,en_array[0,state],decay_rate)*((1/(math.sqrt(2*np.pi)))*sp.integrate.trapz(integrand(pulse_1P,freq_grid,en_array[0,state],dip_array[0,state],decay_rate,time_grid),dx=step_freq,axis=1))
 
 #######################
 #SRIXS WP COEFFICIENTS
@@ -720,7 +720,7 @@ def prefactor_red(energy_eq,time,pulse_mom,gamma_k):
 def wp_calc_opt(time_array, index, low, up, f, f_prime, resonance):
     
     time_begin = time_array[0]
-    time_step = np.unique(np.diff(time_array))
+    time_step = np.unique(np.diff(time_array))  #np.unique->finds unique elements of array; np.diff->calculates discrete difference between elements
     if time_step.size != 1:
     #    print('time_step=',time_step)
     #    print('PLEASE CHECK: timesteps are not equally spaced (for this code they must be) using', time_step[0])
@@ -730,6 +730,12 @@ def wp_calc_opt(time_array, index, low, up, f, f_prime, resonance):
     pulse = pulse_mom[0,index,...]
     gamma_k = 0
     
+    #COMPUTATION OF THE INTEGRAND
+    #The integrand is split in two:
+    #Initial term at t_0 containing the fraction and pulse_mom -> integrand_full_time_begin
+    #Iterative term containing the exponential depending of delta_t -> integrand_timestep_factor
+    #Big calculation outside the for, inside the for simple multiplication.
+
     # compute the integrand for time_begin
     numerator_m = ne.evaluate('exp((complex(0,1)*energy+(gamma_k/2))*time_begin)')
     denominator_m = ne.evaluate('energy-complex(0,1)*(gamma_k/2)')
@@ -745,16 +751,16 @@ def wp_calc_opt(time_array, index, low, up, f, f_prime, resonance):
             integrand_full = np.multiply(integrand_full, integrand_timestep_factor)             
     
         ### integrate
-        if index == 0:
-            integrand_full[resonance[0],resonance[1]] = 0
+        if index == 0: #REXS
+            integrand_full[resonance[0],resonance[1]] = 0   #integrand=0 on the strip (row, col strip coords array)
         
         correction = (-np.sum(((sp.integrate.trapz(integrand_full[low[0],low[1]]*step_size/2, dx=step_size)*step_size)/2)
             +((sp.integrate.trapz(integrand_full[up[0],up[1]]*step_size/2, dx=step_size)*step_size)/2))
             +f_prime*(math.sin(delta*time)/(delta*time))+complex(0,1)*(2*sp.special.sici(delta*time)[0]+np.pi)*f)
     
-        integral_0 = step_size*step_size*np.sum(integrand_full)
+        integral_0 = step_size*step_size*np.sum(integrand_full)   #0th order integration to save computational time
         
-        result[nr] = integral_0 + correction
+        result[nr] = (-1/(2*np.pi))*(integral_0 + correction)
         
     return result
     
@@ -899,9 +905,13 @@ num_processes = int(np.round(time_array.size/100))+1
 
 ####
 
+#INTEGRAL COMPUTATION
+#Strip data from compute_stri_stats for each state (corresponding to index)
+#Strip data passed to wp_calc_opt and then parallelisation
+
 def compute_integral(index):
     low, up, f, f_prime, resonan_strip = compute_strip_stats(index)
-    pulse_mom[0,index,resonan_strip[0],resonan_strip[1]] = 0
+    pulse_mom[0,index,resonan_strip[0],resonan_strip[1]] = 0 #CHECK FOR REDUNDANCY
     result = np.zeros((time_array.size),dtype=np.complex64)
     time_grids = np.array_split(time_array,num_processes)
     with mp.Pool(num_processes) as p:
