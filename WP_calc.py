@@ -543,14 +543,13 @@ def gauss_freq_2D(omega,omega_carrier,time_shift,sigma,amplitude,pol_v):
     return(np.einsum('x,pd->xpd',pol_v,amplitude*shift_factor*envelope))
 
 
-
 #The pulse is defined as E(\omega)=|E(\omega)|e^{i\phi(\omega)}.
 #E(\omega) and E(\omega)* differ in the sign of the exponential. The phase \phi(\omega) is set to 0 in testing.
 
 #DEFINITION OF |E_0| FROM IRRADIANCE
 #The Irradiance definition is: I=1/2*c*epsilon_0*|E|
 #Thus, |E_0|=sqrt(2I/(epsilon_0*c))
-#Irradiance in W/cm^2 is multiplied by 1e4 and divided by the a.u. of Irradiance->Irradiance in a.u. is obtained
+#1 a.u. of Irradiance is equal to 3.51e16 W/cm^2 (from https://onlinelibrary.wiley.com/doi/pdf/10.1002/3527605606.app9)
 #Epsilon_0 in a.u. is obtained by dividing its value in F/m by the unit of a.u. of permittivity in F/m.
 #The formula for the electric field is applied, obtaining the value of |E_0| in a.u.
 
@@ -559,28 +558,21 @@ def gauss_freq_2D(omega,omega_carrier,time_shift,sigma,amplitude,pol_v):
 #F(\omega) = \int_{-\infty}^{\infty}dt f(t)e^{-i\omega t}
 #f(t) = 1/(2\pi)\int_{-\infty}^{\infty}dt F(\omega)e^{i\omega t}
 
-irradiance_W_cm2 = 1e18 #W/cm^2
-irradiance_W_m2_au = 6.43641e19 #(W/m^2)/a.u. From https://en.wikipedia.org/wiki/Hartree_atomic_units
-irradiance_au = (irradiance_W_cm2*1e4)/irradiance_W_m2_au
-E_0 = math.sqrt((2*irradiance_au)/(epsilon_0_au*137))
-E_0_p = 1e-2*E_0
-E_0_d = 1e-2*E_0
+attenuation = 1e-2
+irradiance_W_cm2_au = 3.51e16 #(W/cm^2)/a.u. 
+irradiance_p = (1e18*attenuation)/irradiance_W_cm2_au
+irradiance_d = (1e18*attenuation)/irradiance_W_cm2_au
 
-#Polarization vector
-#pol_p = np.array([0,0,1])
-#pol_d = np.array([0,0,1])
+E_0_p = math.sqrt((2*irradiance_p)/(epsilon_0_au*137))
+E_0_d = math.sqrt((2*irradiance_d)/(epsilon_0_au*137))
 
 #Definition of the pulse parameters
-#pump_carrier = 229.73/energy_1auE_eV     #input values in eV->converted to a.u.
-#dump_carrier = 229.73/energy_1auE_eV
-#bandwidth = 8/energy_1auE_eV            #input values in eV->converted to a.u.
 sigma_f = bandwidth/2.355
 
 #Definition of the gaussian pulse-time domain
 begin = 2000e-18/time_1aut_s #attoseconds
 end = 4000e-18/time_1aut_s
 step_time = 1e-18/time_1aut_s
-
 
 #Calculation of the duration (attoseconds) - transform limited pulse
 duration = (0.441*planck_eV)/(bandwidth*energy_1auE_eV)
