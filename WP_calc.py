@@ -158,7 +158,7 @@ print('loading constants')
 #Definition of unit conversion constants
 
 time_1aut_s = sp.constants.physical_constants['atomic unit of time'][0]
-planck_eV = sp.constants.physical_constants['Planck constant in eV/Hz'][0]
+planck_eV = sp.constants.physical_constants['reduced Planck constant in eV s'][0]
 epsilon_0_au = sp.constants.epsilon_0/sp.constants.physical_constants['atomic unit of permittivity'][0]
 
 def RIXS_TM_mod(row):
