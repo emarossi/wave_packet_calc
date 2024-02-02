@@ -158,7 +158,7 @@ print('loading constants')
 #Definition of unit conversion constants
 
 time_1aut_s = sp.constants.physical_constants['atomic unit of time'][0]
-planck_eV = sp.constants.physical_constants['reduced Planck constant in eV s'][0]
+planck_eV_Hz = sp.constants.physical_constants['Planck constant in eV/Hz'][0]
 epsilon_0_au = sp.constants.epsilon_0/sp.constants.physical_constants['atomic unit of permittivity'][0]
 
 def RIXS_TM_mod(row):
@@ -558,10 +558,9 @@ def gauss_freq_2D(omega,omega_carrier,time_shift,sigma,amplitude,pol_v):
 #F(\omega) = \int_{-\infty}^{\infty}dt f(t)e^{-i\omega t}
 #f(t) = 1/(2\pi)\int_{-\infty}^{\infty}dt F(\omega)e^{i\omega t}
 
-attenuation = 1e-2
 irradiance_W_cm2_au = 3.51e16 #(W/cm^2)/a.u. 
-irradiance_p = (1e18*attenuation)/irradiance_W_cm2_au
-irradiance_d = (1e18*attenuation)/irradiance_W_cm2_au
+irradiance_p = 1e18/irradiance_W_cm2_au
+irradiance_d = 1e18/irradiance_W_cm2_au
 
 E_0_p = math.sqrt((2*irradiance_p)/(epsilon_0_au*137))
 E_0_d = math.sqrt((2*irradiance_d)/(epsilon_0_au*137))
@@ -575,8 +574,8 @@ end = 4000e-18/time_1aut_s
 step_time = 1e-18/time_1aut_s
 
 #Calculation of the duration (attoseconds) - transform limited pulse
-duration = (0.441*planck_eV)/(bandwidth*energy_1auE_eV)
-sigma_t = (duration/2.355)/time_1aut_s
+duration = (0.441*planck_eV_Hz)/(bandwidth*energy_1auE_eV)
+sigma_t = (duration/2.355)/time_1aut_s   #FWHM = sigma*2.355
 print('Pulse duration: %f as'%(duration/1e-18))
 
 pump_time_shift = 0e-18/time_1aut_s
