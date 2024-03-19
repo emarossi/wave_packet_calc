@@ -1,0 +1,12 @@
+cff-version: 1.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Rossi"
+  given-names: "Emanuele"
+- family-names: "Chuchurka"
+  given-names: "Stasis"
+- family-names: "Jakobsen"
+  given-names: "Mads"
+title: "Perturbative light matter interaction"
+version: 1.0
+url: "https://github.com/emarossi/wave_packet_calc"
