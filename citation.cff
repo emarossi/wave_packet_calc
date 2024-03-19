@@ -7,6 +7,14 @@ authors:
   given-names: "Stasis"
 - family-names: "Jakobsen"
   given-names: "Mads"
-title: "Perturbative light matter interaction"
+title: "Perturbative light matter interaction code"
 version: 1.0
 url: "https://github.com/emarossi/wave_packet_calc"
+
+@software{Perturbative code,
+  author = {Emanuele, Rossi and Stasis, Chuchurka and Mads, Jakobsen},
+  title = {{Wave-packet in neutral molecule launched by XFEL pulse: perturbative code}},
+  url = {https://github.com/emarossi/wave_packet_calc},
+  version = {1.0},
+  year = {2024}
+}
