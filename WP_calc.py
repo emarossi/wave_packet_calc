@@ -747,7 +747,7 @@ def wp_calc_opt(time_array, index, low, up, f, f_prime, resonance):
         
         correction = (-np.sum(((sp.integrate.trapz(integrand_full[low[0],low[1]]*step_size/2, dx=step_size)*step_size)/2)
             +((sp.integrate.trapz(integrand_full[up[0],up[1]]*step_size/2, dx=step_size)*step_size)/2))
-            +f_prime*(math.sin(delta*time)/(delta*time))+complex(0,1)*(2*sp.special.sici(delta*time)[0]+np.pi)*f)
+            +f_prime*2*(math.sin(delta*time)/time)+complex(0,1)*(2*sp.special.sici(delta*time)[0]+np.pi)*f)
     
         integral_0 = step_size*step_size*np.sum(integrand_full)   #0th order integration to save computational time
         
