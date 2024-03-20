@@ -1,5 +1,6 @@
 $comment
 OCS Hartree-Fock calculation - MO volume files generation
+The HF MO coefficients are saved and used to restart the GS-VE and GS-CE EOM-CC calculations.
 $end
 
 $molecule
@@ -15,7 +16,7 @@ $rem
    METHOD  = hf
    SCF_FINAL_PRINT = 2
    PLOTS = 1     ! Activate new plot format
-   MAKE_CUBE_FILES = true
+   MAKE_CUBE_FILES = true   !Volumetric data in the cube file format
 $end
 
 $plots
@@ -41,18 +42,19 @@ $rem
    JOB_TYPE = sp
    BASIS = 6-311+G*
    METHOD  =  eom-ccsd
-   N_FROZEN_CORE = 2
+   N_FROZEN_CORE = 2   !atom's core MO frozen = X-Ray edge
    SCF_GUESS = read      !take HF data from saved calculation
    SKIP_SCFMAN = true    !skip HF calculation, take data from saved
    CVS_EE_STATES = [0,0,0,0]   !just to invoke CVS
-   EE_STATES = [3,3,3,3]
+   EE_STATES = [3,3,3,3]   !number of states per irreducible representation
    STATE_ANALYSIS = true  ! Calculation of the 1PDMs of excited states 
    cc_trans_prop = 1  ! Transition properties (1=GS-VE, 3=all)
-   GUI = 2          ! Drop DMs into checkpoint
+   GUI = 2          ! Drop DMs into checkpoint file
    CC_REF_PROP = 1  ! Activate REXS calculation and ground state analysis
    CC_EOM_RIXS = 1  ! Activate RIXS calculation using fc-CVS-EOM-EE-CCSD
 $end
 
+!Specification of the frequency grid
 $rixs
    omega_1 4194000 220 1480 0
    omega_2 4194000 220 1 0
@@ -78,8 +80,8 @@ $rem
   N_FROZEN_CORE = 2
   SCF_GUESS = read
   SKIP_SCFMAN = true
-  CVS_EE_STATES = [5,0,5,5]   !just to invoke CVS
+  CVS_EE_STATES = [5,0,5,5] 
   STATE_ANALYSIS = true  ! Calculation of the DMs
   CC_TRANS_PROP = 3  ! Calculate transition properties
-  GUI = 2          ! Drop DMs into checkpoint
+  GUI = 2          ! Drop DMs into checkpoint file
 $end
