@@ -1,7 +1,18 @@
-@software{Perturbative code,
-  author = {Emanuele, Rossi and Stasis, Chuchurka and Mads, Jakobsen},
-  title = {{Wave-packet in neutral molecule launched by XFEL pulse: perturbative code}},
-  url = {https://github.com/emarossi/wave_packet_calc},
-  version = {1.0},
-  year = {2024}
-}
+cff-version: 1.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Rossi"
+  given-names: "Emanuele"
+  orcid: 
+- family-names: "Chuchurka"
+  given-names: "Stasis"
+  orcid: 
+- family-names: "Jakobsen"
+  given-names: "Mads"
+  orcid: 
+title: "Wave-packet in neutral molecule launched by XFEL pulse: perturbative code"
+version: 1.0
+doi: 
+date-released: 2024
+url: "https://github.com/emarossi/wave_packet_calc"
+
