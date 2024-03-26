@@ -61,16 +61,16 @@ path_2P = ''
 file_2P = file
 
 if pulse_option == '1C':
-    freq_carrier = sys.argv[3]
-    bandwidth = sys.argv[5]
+    freq_carrier = float(sys.argv[3])/energy_1auE_eV
+    bandwidth = float(sys.argv[5])/energy_1auE_eV
     pol = polarization_dict[sys.argv[7]]
     print(f'pol check {pol}')
 
 elif pulse_option == '2C':
-    carrier_C1 = sys.argv[3]
-    carrier_C2 = sys.argv[4]
-    bandwidth_C1 = sys.argv[5]
-    bandwidth_C2 = sys.argv[6]
+    carrier_C1 = float(sys.argv[3])/energy_1auE_eV
+    carrier_C2 = float(sys.argv[4])/energy_1auE_eV
+    bandwidth_C1 = float(sys.argv[5])/energy_1auE_eV
+    bandwidth_C2 = float(sys.argv[6])/energy_1auE_eV
     pol_C1 = polarization_dict[sys.argv[7]]
     pol_C2 = polarization_dict[sys.argv[8]]
 
