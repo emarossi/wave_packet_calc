@@ -48,7 +48,7 @@ polarization_dict = {'x' : np.array([1,0,0]),
                      'xz': (1/np.sqrt(2))*np.array([1,0,1]),
                      'xy': (1/np.sqrt(2))*np.array([1,1,0]),
                      'Rxy' : (1/np.sqrt(2))*np.array([1,complex(0,1),0]),
-                     'Rxy' : (1/np.sqrt(2))*np.array([1,-complex(0,1),0])
+                     'Lxy' : (1/np.sqrt(2))*np.array([1,-complex(0,1),0])
                      }
 
 
