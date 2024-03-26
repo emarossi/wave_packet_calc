@@ -21,13 +21,13 @@ energy_1auE_eV = sp.constants.physical_constants['hartree-electron volt relation
 
 print('calling python script with')
 print(f'file {sys.argv[1]}')
-print(f'pulse option' {sys.argv[2]})
-print(f'color #1 carrier' {sys.argv[3]})
-print(f'color #2 carrier' {sys.argv[4]})
-print(f'color #1 bandwidth' {sys.argv[5]})
-print(f'color #2 bandwidth' {sys.argv[6]})
-print(f'color #1 polarization' {sys.argv[7]})
-print(f'color #2 polarization' {sys.argv[8]})
+print(f'pulse option {sys.argv[2]}')
+print(f'color #1 carrier {sys.argv[3]}')
+print(f'color #2 carrier {sys.argv[4]}')
+print(f'color #1 bandwidth {sys.argv[5]}')
+print(f'color #2 bandwidth {sys.argv[6]}')
+print(f'color #1 polarization {sys.argv[7]}')
+print(f'color #2 polarization {sys.argv[8]}')
 print(f'grid dimension (#points) {sys.argv[9]}')
 print(f'storing result in filename: {sys.argv[10]}')
 
@@ -99,7 +99,7 @@ elif pulse_option == '2C':
 
 # pump_carrier = float(sys.argv[8])/energy_1auE_eV #229.73/     #input values in eV->converted to a.u.
 # dump_carrier = float(sys.argv[9])/energy_1auE_eV #229.73/energy_1auE_eV
-# bandwidth = float(sys.argv[10])/energy_1auE_eV # 8/energy_1auE_eV            #i
+# bandwidth = float(sys.argv[10])/energy_1auE_eV # 8/energy_1auE_eV   
 
 # dim = int(sys.argv[11])
 
