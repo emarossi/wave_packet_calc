@@ -105,8 +105,8 @@ elif pulse_option == '2C':
 
 # outputfilename = sys.argv[12]
 
-path_2P = ''
-file_2P = file
+# path_2P = ''
+# file_2P = file
           
 
 
