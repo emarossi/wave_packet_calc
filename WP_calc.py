@@ -10,55 +10,100 @@ import numexpr as ne
 #import cupy as cp
 import sys
 
+
+## LOADING USEFUL COSTANTS ##
+
+time_1aut_s = sp.constants.physical_constants['atomic unit of time'][0]
+planck_eV_Hz = sp.constants.physical_constants['Planck constant in eV/Hz'][0]
+epsilon_0_au = sp.constants.epsilon_0/sp.constants.physical_constants['atomic unit of permittivity'][0]
+energy_1auE_eV = sp.constants.physical_constants['hartree-electron volt relationship'][0]
+
+
 print('calling python script with')
 print(f'file {sys.argv[1]}')
-print(f'pol_p {sys.argv[2]} {sys.argv[3]} {sys.argv[4]}')
-print(f'pol_d {sys.argv[5]} {sys.argv[6]} {sys.argv[7]}')
-print(f'pump_carrier {sys.argv[8]}')
-print(f'dump_carrier {sys.argv[9]}')
-print(f'bandwidth {sys.argv[10]}')
-print(f'grid dimension (#points) {sys.argv[11]}')
-print(f'storing result in filename: {sys.argv[12]}')
+print(f'pulse option' {sys.argv[2]})
+print(f'color #1 carrier' {sys.argv[3]})
+print(f'color #2 carrier' {sys.argv[4]})
+print(f'color #1 bandwidth' {sys.argv[5]})
+print(f'color #2 bandwidth' {sys.argv[6]})
+print(f'color #1 polarization' {sys.argv[7]})
+print(f'color #2 polarization' {sys.argv[8]})
+print(f'grid dimension (#points) {sys.argv[9]}')
+print(f'storing result in filename: {sys.argv[10]}')
+
+# print(f'pol_p {sys.argv[2]} {sys.argv[3]} {sys.argv[4]}')
+# print(f'pol_d {sys.argv[5]} {sys.argv[6]} {sys.argv[7]}')
+# print(f'pump_carrier {sys.argv[8]}')
+# print(f'dump_carrier {sys.argv[9]}')
+# print(f'bandwidth {sys.argv[10]}')
+# print(f'grid dimension (#points) {sys.argv[11]}')
+# print(f'storing result in filename: {sys.argv[12]}')
 
 ###############################
 #DEFINITION OF INPUT VARIABLES
 ###############################
 
+polarization_dict = {'x' : np.array([1,0,0]),
+                     'z' : np.array([0,0,1]),
+                     'xz': (1/np.sqrt(2))*np.array([1,0,1]),
+                     'xy': (1/np.sqrt(2))*np.array([1,1,0]),
+                     'Rxy' : (1/np.sqrt(2))*np.array([1,complex(0,1),0]),
+                     'Rxy' : (1/np.sqrt(2))*np.array([1,-complex(0,1),0])
+                     }
+
+
 file = sys.argv[1]
+pulse_option = sys.argv[2]
+dim = int(sys.argv[9])
+outputfilename = sys.argv[10]
 
+path_2P = ''
+file_2P = file
 
-pol_p = np.array([0,0,0])
-pol_d = np.array([0,0,0])
+if pulse_option == '1C':
+    freq_carrier = sys.argv[3]
+    bandwidth = sys.argv[5]
+    pol = polarization_dict[sys.argv[7]]
+    print(f'pol check {pol}')
 
-pol_p[0] = sys.argv[2]
-pol_p[1] = sys.argv[3]
-pol_p[2] = sys.argv[4]
-pol_d[0] = sys.argv[5]
-pol_d[1] = sys.argv[6]
-pol_d[2] = sys.argv[7]
+elif pulse_option == '2C':
+    carrier_C1 = sys.argv[3]
+    carrier_C2 = sys.argv[4]
+    bandwidth_C1 = sys.argv[5]
+    bandwidth_C2 = sys.argv[6]
+    pol_C1 = polarization_dict[sys.argv[7]]
+    pol_C2 = polarization_dict[sys.argv[8]]
 
-if not pol_p.any() and not pol_d.any():
-	print('random over 100000 samples')
-	pol_r = np.mean(np.random.uniform(low=-1, high=1, size=(3,100000),axis=1)) #size = (3,#num_samples)
-	pol_r_n = pol_r/np.sqrt(np.sum(pol_r**2))
-	pol_p = pol_r_n
-	pol_d = pol_r_n
-	print(pol_r_n,np.sqrt(np.sum(pol_r_n**2)))
-else:
-	print('NOT random!!!')
+# pol_p = np.array([0,0,0])
+# pol_d = np.array([0,0,0])
 
-print(f'pol_p check {pol_p}')
-print(f'pol_d check {pol_d}')
+# pol_p[0] = sys.argv[2]
+# pol_p[1] = sys.argv[3]
+# pol_p[2] = sys.argv[4]
+# pol_d[0] = sys.argv[5]
+# pol_d[1] = sys.argv[6]
+# pol_d[2] = sys.argv[7]
 
-energy_1auE_eV = sp.constants.physical_constants['hartree-electron volt relationship'][0]
+# if not pol_p.any() and not pol_d.any():
+# 	print('random over 100000 samples')
+# 	pol_r = np.mean(np.random.uniform(low=-1, high=1, size=(3,100000),axis=1)) #size = (3,#num_samples)
+# 	pol_r_n = pol_r/np.sqrt(np.sum(pol_r**2))
+# 	pol_p = pol_r_n
+# 	pol_d = pol_r_n
+# 	print(pol_r_n,np.sqrt(np.sum(pol_r_n**2)))
+# else:
+# 	print('NOT random!!!')
 
-pump_carrier = float(sys.argv[8])/energy_1auE_eV #229.73/     #input values in eV->converted to a.u.
-dump_carrier = float(sys.argv[9])/energy_1auE_eV #229.73/energy_1auE_eV
-bandwidth = float(sys.argv[10])/energy_1auE_eV # 8/energy_1auE_eV            #i
+# print(f'pol_p check {pol_p}')
+# print(f'pol_d check {pol_d}')
 
-dim = int(sys.argv[11])
+# pump_carrier = float(sys.argv[8])/energy_1auE_eV #229.73/     #input values in eV->converted to a.u.
+# dump_carrier = float(sys.argv[9])/energy_1auE_eV #229.73/energy_1auE_eV
+# bandwidth = float(sys.argv[10])/energy_1auE_eV # 8/energy_1auE_eV            #i
 
-outputfilename = sys.argv[12]
+# dim = int(sys.argv[11])
+
+# outputfilename = sys.argv[12]
 
 path_2P = ''
 file_2P = file
@@ -153,13 +198,6 @@ print('loading constants')
 #The code in this section reads the output from Qchem. The following variables are read:
 #1-photon properties: GS->VE (A), GS->CE (B) and CE->CE (C), transition energies and transition dipole moments.
 #2-photon properties: GS->GS (REXS) and GS->VE (RIXS) transition moments and relative frequency grids.
-
-# load constants
-#Definition of unit conversion constants
-
-time_1aut_s = sp.constants.physical_constants['atomic unit of time'][0]
-planck_eV_Hz = sp.constants.physical_constants['Planck constant in eV/Hz'][0]
-epsilon_0_au = sp.constants.epsilon_0/sp.constants.physical_constants['atomic unit of permittivity'][0]
 
 def RIXS_TM_mod(row):
     
@@ -559,14 +597,19 @@ def gauss_freq_2D(omega,omega_carrier,time_shift,sigma,amplitude,pol_v):
 #f(t) = 1/(2\pi)\int_{-\infty}^{\infty}dt F(\omega)e^{i\omega t}
 
 irradiance_W_cm2_au = 3.51e16 #(W/cm^2)/a.u. 
-irradiance_p = 1e18/irradiance_W_cm2_au
-irradiance_d = 1e18/irradiance_W_cm2_au
 
-E_0_p = math.sqrt((2*irradiance_p)/(epsilon_0_au*137))
-E_0_d = math.sqrt((2*irradiance_d)/(epsilon_0_au*137))
+#########################
+##### 1 COLOR PULSE #####
+#########################
 
-#Definition of the pulse parameters
-sigma_f = bandwidth/2.355
+### SETTINGS ###
+
+irradiance = 1e18/irradiance_W_cm2_au
+E_0 = math.sqrt((2*irradiance)/(epsilon_0_au*137))   #pulse's height at peak
+
+sigma_f = bandwidth/2.355  #pulse's bandwidth
+
+### TIME DOMAIN ###
 
 #Definition of the gaussian pulse-time domain
 begin = 2000e-18/time_1aut_s #attoseconds
@@ -578,39 +621,83 @@ duration = (0.441*planck_eV_Hz)/(bandwidth*energy_1auE_eV)
 sigma_t = (duration/2.355)/time_1aut_s   #FWHM = sigma*2.355
 print('Pulse duration: %f as'%(duration/1e-18))
 
-pump_time_shift = 0e-18/time_1aut_s
-dump_time_shift = 0e-18/time_1aut_s
+time_shift = 0e-18/time_1aut_s
 
 time_array = np.arange(-begin,end,step_time)
-pump_time = np.einsum('x,t->xt',pol_p,E_0_p*(sigma_f*math.sqrt(2*math.pi))*np.exp(-0.5*(((time_array-pump_time_shift)**2)*(sigma_f**2)))*np.exp(-complex(0,1)*pump_carrier*time_array))
-dump_time = np.einsum('x,t->xt',pol_d,E_0_d*(sigma_f*math.sqrt(2*math.pi))*np.exp(-0.5*(((time_array-dump_time_shift)**2)*(sigma_f**2)))*np.exp(-complex(0,1)*dump_carrier*time_array))
-pulse_time = pump_time+dump_time
+pulse_time = np.einsum('x,t->xt',pol,E_0*(sigma_f*math.sqrt(2*math.pi))*np.exp(-0.5*(((time_array-time_shift)**2)*(sigma_f**2)))*np.exp(-complex(0,1)*freq_carrier*time_array))
 
-#Definition of the gaussian pulse-frequency domain
+### FREQUENCY DOMAIN ###
 
-#1-photon frequency array
+### first order ###
 freq_array = pump_grid[0]
 step_freq = pump_grid[1][1]-pump_grid[1][0]  #defining the grid step size
 
-#Linearly polarized
-pulse_1P = (gauss_freq_1D(freq_array,pump_carrier,pump_time_shift,sigma_f,E_0_p,pol_p)
-            +gauss_freq_1D(freq_array,dump_carrier,dump_time_shift,sigma_f,E_0_d,pol_d)).astype('complex64')
+pulse_1P = gauss_freq_1D(freq_array,freq_carrier,time_shift,sigma_f,E_0,pol)
 
-#Circularly polarized - dump shifted by pi/2 with respect to pump
-#pulse_1P = (gauss_freq_1D(freq_array,pump_carrier,pump_time_shift,sigma_f,E_0_p,pol_p)
-#            +gauss_freq_1D(freq_array,dump_carrier+np.pi/(2*dump_carrier),dump_time_shift,sigma_f,E_0_d,pol_d)).astype('complex64')
-
-#2-photon frequency grid
+### second order ###
 
 #Linearly polarized
-pump_freq = gauss_freq_2D(pump_grid,pump_carrier,pump_time_shift,sigma_f,E_0_p,pol_p)+gauss_freq_2D(pump_grid,dump_carrier,dump_time_shift,sigma_f,E_0_d,pol_d)
-dump_freq = gauss_freq_2D(dump_grid,pump_carrier,pump_time_shift,sigma_f,E_0_p,pol_p)+gauss_freq_2D(dump_grid,dump_carrier,dump_time_shift,sigma_f,E_0_d,pol_d)
-
-#Circularly polarized - dump shifted by pi/2 with respect to pump
-#pump_freq = gauss_freq_2D(pump_grid,pump_carrier,pump_time_shift,sigma_f,E_0_p,pol_p)+gauss_freq_2D(pump_grid,dump_carrier+np.pi/(2*dump_carrier),dump_time_shift,sigma_f,E_0_d,pol_d)
-#dump_freq = gauss_freq_2D(dump_grid,pump_carrier,pump_time_shift,sigma_f,E_0_p,pol_p)+gauss_freq_2D(dump_grid,dump_carrier+np.pi/(2*dump_carrier),dump_time_shift,sigma_f,E_0_d,pol_d)
+pump_freq = gauss_freq_2D(pump_grid,freq_carrier,time_shift,sigma_f,E_0,pol)
+dump_freq = gauss_freq_2D(dump_grid,freq_carrier,time_shift,sigma_f,E_0,pol)
 
 pulse_matrix = np.einsum('xpd,ypd->xypd',pump_freq,np.conjugate(dump_freq)).astype('complex64')
+
+
+########################
+#### 2 COLORS PULSE ####
+########################
+
+### SETTINGS ###
+
+# irradiance_C1 = 1e18/irradiance_W_cm2_au
+# irradiance_C2 = 1e18/irradiance_W_cm2_au
+
+# E_0_C1 = math.sqrt((2*irradiance_C1)/(epsilon_0_au*137))
+# E_0_C2 = math.sqrt((2*irradiance_C2)/(epsilon_0_au*137))
+
+# #Definition of the pulse parameters
+# sigma_f_C1 = bandwidth_C1/2.355
+# sigma_f_C2 = bandwidth_C2/2.355
+
+### TIME DOMAIN ###
+
+#Definition of the gaussian pulse-time domain
+# begin = 2000e-18/time_1aut_s #attoseconds
+# end = 4000e-18/time_1aut_s
+# step_time = 1e-18/time_1aut_s
+
+#Calculation of the duration (attoseconds) - transform limited pulse
+# duration_C1 = (0.441*planck_eV_Hz)/(bandwidth_C1*energy_1auE_eV)
+# duration_C2 = (0.441*planck_eV_Hz)/(bandwidth_C1*energy_1auE_eV)
+
+# sigma_t_C1 = (duration_C1/2.355)/time_1aut_s   #FWHM = sigma*2.355
+# sigma_t_C2 = (duration_C2/2.355)/time_1aut_s 
+
+# print('Pulse duration: %f as'%(duration/1e-18))
+
+# time_shift_C1 = 0e-18/time_1aut_s
+# time_shift_C2 = 0e-18/time_1aut_s
+
+# time_array = np.arange(-begin,end,step_time)
+# pulse_time_C1 = np.einsum('x,t->xt',pol_p,E_0_C1*(sigma_f_C1*math.sqrt(2*math.pi))*np.exp(-0.5*(((time_array-time_shift_C1)**2)*(sigma_f_C1**2)))*np.exp(-complex(0,1)*carrier_C1*time_array))
+# pulse_time_C2 = np.einsum('x,t->xt',pol_d,E_0_C2*(sigma_f_C2*math.sqrt(2*math.pi))*np.exp(-0.5*(((time_array-time_shift_C2)**2)*(sigma_f_C2**2)))*np.exp(-complex(0,1)*carrier_C2*time_array))
+# pulse_time = pulse_time_C1+pulse_time_C2
+
+### FREQUENCY DOMAIN ###
+
+### first order ###
+# freq_array = pump_grid[0]
+# step_freq = pump_grid[1][1]-pump_grid[1][0]  #defining the grid step size
+
+# pulse_1P = (gauss_freq_1D(freq_array,carrier_C1,time_shift_C1,sigma_f_C1,E_0_C1,pol_C1)
+#             +gauss_freq_1D(freq_array,carrier_C2,time_shift_C2,sigma_f_C2,E_0_C2,pol_C2)).astype('complex64')
+
+### second order ###
+
+# pump_freq = gauss_freq_2D(pump_grid,carrier_C1,pump_time_C1,sigma_f_C1,E_0_C1,pol_C1)+gauss_freq_2D(pump_grid,carrier_C2,time_shift_C2,sigma_f_C2,E_0_C2,pol_C2)
+# dump_freq = gauss_freq_2D(dump_grid,carrier_C1,pump_time_C1,sigma_f_C1,E_0_C1,pol_C1)+gauss_freq_2D(dump_grid,carrier_C2,time_shift_C2,sigma_f_C2,E_0_C2,pol_C2)
+
+# pulse_matrix = np.einsum('xpd,ypd->xypd',pump_freq,np.conjugate(dump_freq)).astype('complex64')
 
 #fig,ax = plt.subplots(nrows=1,ncols=2,figsize=(20,8))
 #ax[0].plot(time_array*time_1aut_s/1e-15,pulse_time[0,:])
