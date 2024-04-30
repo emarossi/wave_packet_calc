@@ -570,20 +570,10 @@ print('RIXS read')
 
 #Definition of Gaussian functions in the frequency domain
 
-# def gauss_freq_1D(omega,omega_carrier,time_shift,sigma,amplitude,pol_v):
-#     shift_factor = np.exp(complex(0,1)*(omega)*time_shift)
-#     envelope = np.exp(-(((omega-omega_carrier)**2)/(2*sigma**2)))
-#     return(np.einsum('x,f->xf',pol_v,amplitude*shift_factor*envelope))
-
 def gauss_freq_1D(omega,omega_carrier,time_shift,alpha,amplitude,pol_v):
     shift_factor = np.exp(complex(0,1)*(omega)*time_shift)
     envelope = np.exp(-(((omega-omega_carrier)**2)/(4*alpha)))
     return(np.einsum('x,f->xf',pol_v,amplitude*shift_factor*envelope))
-
-# def gauss_freq_2D(omega,omega_carrier,time_shift,sigma,amplitude,pol_v):
-#     shift_factor = np.exp(complex(0,1)*(omega)*time_shift)
-#     envelope = np.exp(-(((omega-omega_carrier)**2)/(2*sigma**2)))
-#     return(np.einsum('x,pd->xpd',pol_v,amplitude*shift_factor*envelope))
 
 def gauss_freq_2D(omega,omega_carrier,time_shift,alpha,amplitude,pol_v):
     shift_factor = np.exp(complex(0,1)*(omega)*time_shift)
@@ -601,9 +591,9 @@ def gauss_freq_2D(omega,omega_carrier,time_shift,alpha,amplitude,pol_v):
 #The formula for the electric field is applied, obtaining the value of |E_0| in a.u.
 
 #FOURIER TRANSFORM CONVENTION
-#The convection used is the non-unitary one:
-#F(\omega) = \int_{-\infty}^{\infty}dt f(t)e^{-i\omega t}
-#f(t) = 1/(2\pi)\int_{-\infty}^{\infty}dt F(\omega)e^{i\omega t}
+#The convection used is the unitary one:
+#F(\omega) = 1/(\sqrt(2\pi))\int_{-\infty}^{\infty}dt f(t)e^{-i\omega t}
+#f(t) = 1/(\sqrt(2\pi))\int_{-\infty}^{\infty}dt F(\omega)e^{i\omega t}
 
 irradiance_W_cm2_au = 3.51e16 #(W/cm^2)/a.u. 
 
@@ -615,7 +605,7 @@ irradiance_W_cm2_au = 3.51e16 #(W/cm^2)/a.u.
 
 irradiance = 1e18/irradiance_W_cm2_au
 E_0 = math.sqrt((2*irradiance)/(epsilon_0_au*137))   #pulse's height at peak
-bw_Hz_au = (bandwidth/planck_eV_Hz)*time_1aut_s
+bw_Hz_au = ((bandwidth*energy_1auE_eV)/planck_eV_Hz)*time_1aut_s
 alpha = ((bw_Hz_au*np.pi)**2)/(2*math.log(2))
 
 # sigma_f = bandwidth/2.355  #pulse's bandwidth
@@ -629,16 +619,12 @@ step_time = 1e-18/time_1aut_s
 
 #Calculation of the duration (attoseconds) - transform limited pulse
 duration = np.sqrt((2*math.log(2))/alpha)
-print('Pulse duration: %f as'%(duration/1e-18))
-
-# duration = (0.441*planck_eV_Hz)/(bandwidth*energy_1auE_eV)
-# sigma_t = (duration/2.355)/time_1aut_s   #FWHM = sigma*2.355
+print('Pulse duration: %f as'%((duration*time_1aut_s)/1e-18))
 
 time_shift = 0e-18/time_1aut_s
 
 time_array = np.arange(-begin,end,step_time)
 pulse_time = np.einsum('x,t->xt',pol,E_0*np.sqrt(alpha/np.pi)*np.exp(-alpha*(time_array-time_shift)**2)*np.exp(-complex(0,1)*freq_carrier*time_array))
-# pulse_time = np.einsum('x,t->xt',pol,E_0*(sigma_f*math.sqrt(2*math.pi))*np.exp(-0.5*(((time_array-time_shift)**2)*(sigma_f**2)))*np.exp(-complex(0,1)*freq_carrier*time_array))
 
 ### FREQUENCY DOMAIN ###
 
@@ -646,15 +632,9 @@ pulse_time = np.einsum('x,t->xt',pol,E_0*np.sqrt(alpha/np.pi)*np.exp(-alpha*(tim
 freq_array = pump_grid[0]
 step_freq = pump_grid[1][1]-pump_grid[1][0]  #defining the grid step size
 
-# pulse_1P = gauss_freq_1D(freq_array,freq_carrier,time_shift,sigma_f,E_0,pol)
 pulse_1P = gauss_freq_1D(freq_array,freq_carrier,time_shift,alpha,E_0,pol)
 
-
 ### second order ###
-
-#Linearly polarized
-# pump_freq = gauss_freq_2D(pump_grid,freq_carrier,time_shift,sigma_f,E_0,pol)
-# dump_freq = gauss_freq_2D(dump_grid,freq_carrier,time_shift,sigma_f,E_0,pol)
 pump_freq = gauss_freq_2D(pump_grid,freq_carrier,time_shift,alpha,E_0,pol)
 dump_freq = gauss_freq_2D(dump_grid,freq_carrier,time_shift,alpha,E_0,pol)
 
@@ -673,9 +653,12 @@ pulse_matrix = np.einsum('xpd,ypd->xypd',pump_freq,np.conjugate(dump_freq)).asty
 # E_0_C1 = math.sqrt((2*irradiance_C1)/(epsilon_0_au*137))
 # E_0_C2 = math.sqrt((2*irradiance_C2)/(epsilon_0_au*137))
 
-# #Definition of the pulse parameters
-# sigma_f_C1 = bandwidth_C1/2.355
-# sigma_f_C2 = bandwidth_C2/2.355
+# #Definition of the gaussian pulse parameters for color 1 and color 2
+# bw_Hz_au_C1 = ((bandwidth_C1*energy_1auE_eV)/planck_eV_Hz)*time_1aut_s
+# alpha_C1 = ((bw_Hz_au_C1*np.pi)**2)/(2*math.log(2))
+
+# bw_Hz_au_C2 = ((bandwidth_C2*energy_1auE_eV)/planck_eV_Hz)*time_1aut_s
+# alpha_C2 = ((bw_Hz_au_C2*np.pi)**2)/(2*math.log(2))
 
 ### TIME DOMAIN ###
 
@@ -685,20 +668,18 @@ pulse_matrix = np.einsum('xpd,ypd->xypd',pump_freq,np.conjugate(dump_freq)).asty
 # step_time = 1e-18/time_1aut_s
 
 #Calculation of the duration (attoseconds) - transform limited pulse
-# duration_C1 = (0.441*planck_eV_Hz)/(bandwidth_C1*energy_1auE_eV)
-# duration_C2 = (0.441*planck_eV_Hz)/(bandwidth_C1*energy_1auE_eV)
+# duration_C1 = np.sqrt((2*math.log(2))/alpha_C1)
+# duration_C2 = np.sqrt((2*math.log(2))/alpha_C2)
 
-# sigma_t_C1 = (duration_C1/2.355)/time_1aut_s   #FWHM = sigma*2.355
-# sigma_t_C2 = (duration_C2/2.355)/time_1aut_s 
-
-# print('Pulse duration: %f as'%(duration/1e-18))
+# print('Pulse duration color 1: %f as'%((duration_C1*time_1aut_s)/1e-18))
+# print('Pulse duration color 2: %f as'%((duration_C2*time_1aut_s)/1e-18))
 
 # time_shift_C1 = 0e-18/time_1aut_s
 # time_shift_C2 = 0e-18/time_1aut_s
 
 # time_array = np.arange(-begin,end,step_time)
-# pulse_time_C1 = np.einsum('x,t->xt',pol_p,E_0_C1*(sigma_f_C1*math.sqrt(2*math.pi))*np.exp(-0.5*(((time_array-time_shift_C1)**2)*(sigma_f_C1**2)))*np.exp(-complex(0,1)*carrier_C1*time_array))
-# pulse_time_C2 = np.einsum('x,t->xt',pol_d,E_0_C2*(sigma_f_C2*math.sqrt(2*math.pi))*np.exp(-0.5*(((time_array-time_shift_C2)**2)*(sigma_f_C2**2)))*np.exp(-complex(0,1)*carrier_C2*time_array))
+# pulse_time_C1 = np.einsum('x,t->xt',pol_C1,E_0_C1*np.sqrt(alpha_C1/np.pi)*np.exp(-alpha_C1*(time_array-time_shift_C1)**2)*np.exp(-complex(0,1)*carrier_C1*time_array))
+# pulse_time_C2 = np.einsum('x,t->xt',pol_C2,E_0_C2*np.sqrt(alpha_C2/np.pi)*np.exp(-alpha_C2*(time_array-time_shift_C2)**2)*np.exp(-complex(0,1)*carrier_C2*time_array))
 # pulse_time = pulse_time_C1+pulse_time_C2
 
 ### FREQUENCY DOMAIN ###
@@ -707,13 +688,13 @@ pulse_matrix = np.einsum('xpd,ypd->xypd',pump_freq,np.conjugate(dump_freq)).asty
 # freq_array = pump_grid[0]
 # step_freq = pump_grid[1][1]-pump_grid[1][0]  #defining the grid step size
 
-# pulse_1P = (gauss_freq_1D(freq_array,carrier_C1,time_shift_C1,sigma_f_C1,E_0_C1,pol_C1)
-#             +gauss_freq_1D(freq_array,carrier_C2,time_shift_C2,sigma_f_C2,E_0_C2,pol_C2)).astype('complex64')
+# pulse_1P = (gauss_freq_1D(freq_array,carrier_C1,time_shift_C1,alpha_C1,E_0_C1,pol_C1)
+#             +gauss_freq_1D(freq_array,carrier_C2,time_shift_C2,alpha_C2,E_0_C2,pol_C2)).astype('complex64')
 
 ### second order ###
 
-# pump_freq = gauss_freq_2D(pump_grid,carrier_C1,pump_time_C1,sigma_f_C1,E_0_C1,pol_C1)+gauss_freq_2D(pump_grid,carrier_C2,time_shift_C2,sigma_f_C2,E_0_C2,pol_C2)
-# dump_freq = gauss_freq_2D(dump_grid,carrier_C1,pump_time_C1,sigma_f_C1,E_0_C1,pol_C1)+gauss_freq_2D(dump_grid,carrier_C2,time_shift_C2,sigma_f_C2,E_0_C2,pol_C2)
+# pump_freq = gauss_freq_2D(pump_grid,carrier_C1,time_shift_C1,alpha_C1,E_0_C1,pol_C1)+gauss_freq_2D(pump_grid,carrier_C2,time_shift_C2,alpha_C2,E_0_C2,pol_C2)
+# dump_freq = gauss_freq_2D(dump_grid,carrier_C1,time_shift_C1,alpha_C1,E_0_C1,pol_C1)+gauss_freq_2D(dump_grid,carrier_C2,time_shift_C2,alpha_C2,E_0_C2,pol_C2)
 
 # pulse_matrix = np.einsum('xpd,ypd->xypd',pump_freq,np.conjugate(dump_freq)).astype('complex64')
 
@@ -922,11 +903,9 @@ print(en_array.shape)
 pulse_mom = np.einsum('ijpdxy,xypd->ijpd',RIXS_TM,pulse_matrix,optimize='optimal')
 energy_eq = np.broadcast_to(en_array[0:num_val_states,0:num_val_states,np.newaxis,np.newaxis],pulse_mom.shape)-np.broadcast_to(pump_grid[np.newaxis,np.newaxis,...],pulse_mom.shape)+np.broadcast_to(dump_grid[np.newaxis,np.newaxis,...],pulse_mom.shape)
 
-delta = 2.25e-2  #doesn't work with 1e-2
+delta = 2.25e-2
 # delta = 2e-2
 step_size = pump_grid[1][1]-pump_grid[1][0]  #defining the grid step size
-
-
 
 
 # uses global variable: grid_dim, delta, energy_eq, pulse_mom
