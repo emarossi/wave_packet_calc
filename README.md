@@ -23,8 +23,8 @@ The code allows free choice of the following pulse parameters:
 <ol>
   1. bandwidth<br>
   2. central frequency<br>
-  3. polarisation (linear and circular)<br>
-</ol><br>
+  3. polarisation (linear and circular)
+</ol>
 Changing between different edges of a same molecule requires obtaining the relative molecular properties from Qchem.
 
 ## Dependencies
