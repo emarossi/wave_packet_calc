@@ -1,5 +1,5 @@
 # AXWP: Attosecond X-Ray Wave Packet - v1.0
-This code simulates the electronic dynamics in a neutral molecule triggered by an attosecond X-Ray pulse. The code uses the molecular properties calculated by a quantum chemistry package. This code builds upon the Qchem 6.1 quantum chemsitry package.
+This code simulates the electronic dynamics in a neutral molecule triggered by an attosecond X-Ray pulse. The code wraps around the Qchem quantum chemistry package, which is used to calculate the molecular electronic structure and its properties.
 
 ## Theoretical model
 
