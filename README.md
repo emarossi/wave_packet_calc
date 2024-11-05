@@ -1,4 +1,4 @@
-# AXWP: Attosecond X-Ray Wave Packet - 1.0v
+# AXWP: Attosecond X-Ray Wave Packet - v1.0
 This code simulates the electronic dynamics in a neutral molecule triggered by an attosecond X-Ray pulse. The code uses the molecular properties calculated by a quantum chemistry package. This code builds upon the Qchem 6.1 quantum chemsitry package.
 
 ## Theoretical model
@@ -7,7 +7,7 @@ The dynamic molecular state $\ket{\Psi(t)}$ is expanded as
 <br><br>
 $$\ket{\Psi(t)} = a_g(t)\ket{\psi_g} + \sum_c a_c(t)e^{-i(\omega_c-i\frac{\Gamma_v}{2})t}\ket{\psi_c} + \sum_v a_v(t)e^{-i(\omega_v-i\frac{\Gamma_v}{2})t}\ket{\psi_v}$$.
 <br><br>
-Here, $\ket{\psi_g}$, $\ket{\psi_c}$ and $\ket{\psi_v}$ represent the ground, core-excited and valence-excited states, respectively. The $\Gamma$ terms in the exponents correspond to the states' decay rates, which are inversely proportional to their lifetime. The expressions for the 'a(t)' coefficients (i.e. the probability amplitudes) are derived within time-dependent perturbation theory. The core transition amplitudes are approximated at the first perturbative order, while the valence transition amplitudes at the second perturbative order. The wave packet expansion is used to obtain the density matrix of the system. 
+Here, $\ket{\psi_g}$, $\ket{\psi_c}$ and $\ket{\psi_v}$ represent the ground, core-excited and valence-excited states, respectively. The $\Gamma$ terms in the exponents correspond to the states' decay rates, which are inversely proportional to their lifetime. The expressions for the 'a(t)' coefficients (i.e. the probability amplitudes) are derived within time-dependent perturbation theory. The core transition amplitudes are approximated at the first perturbative order, while the valence transition amplitudes at the second perturbative order. The wave packet expansion is used to obtain the density matrix of the system. The density matrix is the final output of the code.
 
 ## Numerical implementation 
 
@@ -29,4 +29,15 @@ Changing between different edges of a same molecule requires obtaining the relat
 
 ## Dependencies
 
-The following packages are required: numpy, scipy, 
+The following packages are required: 
+<ol>
+  - multiprocessing<br>
+  - cmath, math, time<br>
+  - numpy, scipy, matplotlib<br>
+  - itertools<br>
+  - numexpr<br><br>
+</ol>
+
+## Work in progress
+
+Version 2.0: object-oriented reformulation, integration of electronic density observable, separate pulse object.
