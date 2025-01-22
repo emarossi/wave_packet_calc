@@ -95,6 +95,19 @@ block_B = False
 block_C = False
 block_AB = False
 
+AB_mat_out = False
+BA_mat_out = False
+
+A_TDM_AB = []
+A_TDM_BA = []
+
+B_TDM_AB = []
+B_TDM_BA = []
+
+C_TDM_AB = []
+C_TDM_BA = []
+
+
 #1-photon: list initialisation
 A_en = []
 A_dip_AB = []; A_dip_BA = []
@@ -197,93 +210,149 @@ with open(path_2P+file_2P,'r') as f:    #Sulfur L1-Edge
         #####################
         #1-photon properties#
         #####################
+
+        '''
+        Output of blocks A, B and C
+        Transition energies, transition density matrices and dipole moments(A->B, B->A)
+        Block A: GS<->VE transitions 
+        Block B: GS<->CE transitions
+        Block C: CE<->CE transitions
+        '''
         
         #BLOCKS A+B: Finding out where the blocks of the matrix output are printed out
-        if ('State A: eomee_ccsd/rhfref/singlets:' in line and 'cvs' not in line) or 'State A: ccsd:' in line:
-            index_a_temp = int(line.split(':')[2].split('/')[0])
+
+        if 'State A: ccsd:' in line:
             block_AB = True
-        
-        #BLOCK A: GS+valence_excited <-> GS+valence_excited; transition energies and dipole moments
-        
-        #Switch
+
         if block_AB == True and 'State B: eomee_ccsd/rhfref/singlets:' in line:
-            print(line)
-            index_ab.append((index_a_temp,int(line.split(':')[2].split('/')[0])))
-            index_A = count
             block_A = True
-            
-        #Data aquisition
-        # if block_A == True and count in range(index_A+1,index_A+5):
-            
-        #     if count == index_A+1:
-        #         print(line)
-        #         A_en.append(float(line.split('=')[2].strip().replace('eV','').strip()))
-                
-        #     if count == index_A+3:
-        #         A_dip_AB.append(dipole_moment_processing(line))
-                
-        #     if count == index_A+4:
-        #         A_dip_BA.append(dipole_moment_processing(line))
-        #         block_A = False
-        #         block_AB = False
+            block_B = False
+        
+        if block_AB == True and 'State B: cvs_eomee_ccsd/rhfref/singlets:' in line:
+            block_B = True
+            block_A = False
+
+        if 'State A: cvs_eomee_ccsd/rhfref/singlets:' in line:
+            block_AB = False
+            block_B = False
+            block_C = True
+
+        #BLOCK A: data acquisition - transition dipoles + energies
         
         if block_A == True and 'Energy GAP' in line:
-            print(line)
             A_en.append(float(line.split('=')[2].strip().replace('eV','').strip()))
-            td_line = count + 2
+            A_dp_line = count + 2
 
-        if block_A == True and 'A->B:' in line and count == td_line:
+        if block_A == True and 'A->B:' in line and count == A_dp_line:
             A_dip_AB.append(dipole_moment_processing(line))
 
-        elif block_A == True and 'B->A:' in line and count == td_line+1:
+        elif block_A == True and 'B->A:' in line and count == A_dp_line+1:
+            A_dip_BA.append(dipole_moment_processing(line))
+
+        #BLOCK B: data acquisition - transition density matrices
+
+        if block_A == True and 'A->B TDM-S' in line:
+            TDM_line_count = -1
+            TDM_temp = []
+            AB_mat_out = True
+                
+        elif block_A == True and 'A->B TDM-E' in line:
+            AB_mat_out = False
+            A_TDM_AB.append(ao_to_mo(C,np.array(np.array(TDM_temp).reshape((mat_dim,mat_dim)))))
+
+        if block_A == True and 'B->A TDM-S' in line:
+            TDM_line_count = -1
+            TDM_temp = []
+            BA_mat_out = True
+                
+        elif block_A == True and 'B->A TDM-E' in line:
+            BA_mat_out = False
+            A_TDM_BA.append(ao_to_mo(C,np.array(np.array(TDM_temp).reshape((mat_dim,mat_dim)))))
+
+        if block_A == True and (AB_mat_out == True or BA_mat_out == True):
+
+            if TDM_line_count > 0:
+                TDM_temp+=list(map(lambda y: float(y), filter(None,map(lambda x: x.strip(),line.split(' ')))))
+
+            TDM_line_count += 1
+
+        #BLOCK B: data acquisition - transition dipoles + energies
+
+        if block_B == True and 'Energy GAP' in line:
+            B_en.append(float(line.split('=')[2].strip().replace('eV','').strip()))
+            B_dp_line = count + 2
+
+        if block_B == True and 'A->B:' in line and count == B_dp_line:
             B_dip_AB.append(dipole_moment_processing(line))
 
-   
-            
+        elif block_B == True and 'B->A:' in line and count == B_dp_line+1:
+            B_dip_BA.append(dipole_moment_processing(line))
 
-        
+        #BLOCK B: data acquisition - transition density matrices
 
-#         # #BLOCK B: GS+valence_excited <-> core_excited; transition energies and dipole moments
-        
-#         #Switch
-#         if block_AB == True and 'State B: cvs_eomee_ccsd/rhfref/singlets:' in line:
-            
-#             index_B = count
-#             block_B = True
-#             block_AB = False
-            
-#         #Data aquisition
-#         if block_B == True and count in range(index_B+1,index_B+5):
-            
-#             if count == index_B+1:
-#                 B_en.append(float(line.split('=')[2].strip().replace('eV','').strip()))
+        if block_B == True and 'A->B TDM-S' in line:
+            TDM_line_count = -1
+            TDM_temp = []
+            AB_mat_out = True
                 
-#             if count == index_B+3:
-#                 B_dip_AB.append(dipole_moment_processing(line))
+        elif block_B == True and 'A->B TDM-E' in line:
+            AB_mat_out = False
+            B_TDM_AB.append(ao_to_mo(C,np.array(np.array(TDM_temp).reshape((mat_dim,mat_dim)))))
+
+        if block_B == True and 'B->A TDM-S' in line:
+            TDM_line_count = -1
+            TDM_temp = []
+            BA_mat_out = True
                 
-#             if count == index_B+4:
-#                 B_dip_BA.append(dipole_moment_processing(line))
-#                 block_B = False
-#                 block_AB = False
-        
-#         # #BLOCK C: core_excited <-> core_excited; transition energies and dipole moments
-        
-#         #Switch
-#         if 'State A: cvs_eomee_ccsd/rhfref/singlets:' in line:
-#             index_C = count
-#             block_C = True
-#         #Data aquisition
-#         if block_C == True and count in range(index_C+2,index_C+6):
-                      
-#             if count == index_C+2:
-#                 C_en.append(float(line.split('=')[2].strip().replace('eV','').strip()))
-              
-#             if count == index_C+4:
-#                 C_dip_AB.append(dipole_moment_processing(line))
-              
-#             if count == index_C+5:
-#                 C_dip_BA.append(dipole_moment_processing(line))
-#                 block_C = False
+        elif block_B == True and 'B->A TDM-E' in line:
+            BA_mat_out = False
+            B_TDM_BA.append(ao_to_mo(C,np.array(np.array(TDM_temp).reshape((mat_dim,mat_dim)))))
+
+        if block_B == True and (AB_mat_out == True or BA_mat_out == True):
+
+            if TDM_line_count >0:
+                TDM_temp+=list(map(lambda y: float(y), filter(None,map(lambda x: x.strip(),line.split(' ')))))
+
+            TDM_line_count += 1
+
+        #BLOCK C: data acquisition - transition dipoles + energies
+
+        if block_C == True and 'Energy GAP' in line:
+            C_en.append(float(line.split('=')[2].strip().replace('eV','').strip()))
+            C_dp_line = count + 2
+
+        if block_C == True and 'A->B:' in line and count == C_dp_line:
+            C_dip_AB.append(dipole_moment_processing(line))
+
+        elif block_C == True and 'B->A:' in line and count == C_dp_line+1:
+            C_dip_BA.append(dipole_moment_processing(line))
+
+        #BLOCK C: data acquisition - transition density matrices
+
+        if block_C == True and 'A->B TDM-S' in line:
+            TDM_line_count = -1
+            TDM_temp = []
+            AB_mat_out = True
+                
+        elif block_C == True and 'A->B TDM-E' in line:
+            AB_mat_out = False
+            C_TDM_AB.append(ao_to_mo(C,np.array(np.array(TDM_temp).reshape((mat_dim,mat_dim)))))
+
+        if block_C == True and 'B->A TDM-S' in line:
+            TDM_line_count = -1
+            TDM_temp = []
+            BA_mat_out = True
+                
+        elif block_C == True and 'B->A TDM-E' in line:
+            BA_mat_out = False
+            C_TDM_BA.append(ao_to_mo(C,np.array(np.array(TDM_temp).reshape((mat_dim,mat_dim)))))
+
+        if block_C == True and (AB_mat_out == True or BA_mat_out == True):
+
+            if TDM_line_count >0:
+                TDM_temp+=list(map(lambda y: float(y), filter(None,map(lambda x: x.strip(),line.split(' ')))))
+
+            TDM_line_count += 1
         
 #         #####################
 #         #2-photon properties#
