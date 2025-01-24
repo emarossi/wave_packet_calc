@@ -9,7 +9,7 @@ The script aims at reading the calculation data and export it as a dictionary.
 
 __author__ = 'Emanuele Rossi'
 __version__ = '2.0'
-__version_date__ = '22 January 2025'
+__version_date__ = 'January 2025'
 
 
 def ao_to_mo(C,DM_ao):
@@ -425,9 +425,10 @@ def output_parse(path,filename):
                 else:
                     tensor_temp += RIXS_TM_mod(line)
 
-    #Reshaping to (num_val_states,omega_p,3,3)
+    #Reshaping RIXS TM's to (num_val_states,omega_p,3,3) and REXS TMs to (omega_p,3,3)
 
-    file_content['transition']['block_A']['RIXS_AB_tm'] = np.array(RIXS_TM_AB).reshape(file_content['state']['num_val_states'],len(file_content['transition']['block_A']['RIXS_grid_p']),3,3)
-    file_content['transition']['block_A']['RIXS_BA_tm'] = np.array(RIXS_TM_BA).reshape(file_content['state']['num_val_states'],len(file_content['transition']['block_A']['RIXS_grid_p']),3,3)
+    file_content['transition']['block_A']['REXS_tm'] = np.array(file_content['transition']['block_A']['REXS_tm'],dtype='complex64').reshape(len(file_content['transition']['block_A']['RIXS_grid_p']),3,3)
+    file_content['transition']['block_A']['RIXS_AB_tm'] = np.array(RIXS_TM_AB,dtype='complex64').reshape(file_content['state']['num_val_states'],len(file_content['transition']['block_A']['RIXS_grid_p']),3,3)
+    file_content['transition']['block_A']['RIXS_BA_tm'] = np.array(RIXS_TM_BA,dtype='complex64').reshape(file_content['state']['num_val_states'],len(file_content['transition']['block_A']['RIXS_grid_p']),3,3)
 
     return file_content
