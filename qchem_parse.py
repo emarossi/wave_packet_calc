@@ -64,7 +64,7 @@ def dipole_moment_processing(vector_string):
     return(list([x,y,z]))
 
 
-def output_parse(path,filename):
+def output_parse(file):
     '''
     Parses the Qchem 6.1 output file, modified to printout the state and transition (A->B, B->A) density matrices.
     Transition properties divided in blocks:
@@ -133,7 +133,7 @@ def output_parse(path,filename):
     RIXS_TM_AB = []
     RIXS_TM_BA = []
 
-    with open(path+filename,'r') as f: 
+    with open(file,'r') as f: 
 
         for count, line in enumerate(f):
 

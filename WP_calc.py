@@ -18,30 +18,35 @@ planck_eV_Hz = sp.constants.physical_constants['Planck constant in eV/Hz'][0]
 epsilon_0_au = sp.constants.epsilon_0/sp.constants.physical_constants['atomic unit of permittivity'][0]
 energy_1auE_eV = sp.constants.physical_constants['hartree-electron volt relationship'][0]
 
-
-# print('calling python script with')
-# print(f'file {sys.argv[1]}')
-# print(f'pulse option {sys.argv[2]}')
-# print(f'color #1 carrier {sys.argv[3]}')
-# print(f'color #2 carrier {sys.argv[4]}')
-# print(f'color #1 bandwidth {sys.argv[5]}')
-# print(f'color #2 bandwidth {sys.argv[6]}')
-# print(f'color #1 polarization {sys.argv[7]}')
-# print(f'color #2 polarization {sys.argv[8]}')
-# print(f'grid dimension (#points) {sys.argv[9]}')
-# print(f'storing result in filename: {sys.argv[10]}')
-
-# print(f'pol_p {sys.argv[2]} {sys.argv[3]} {sys.argv[4]}')
-# print(f'pol_d {sys.argv[5]} {sys.argv[6]} {sys.argv[7]}')
-# print(f'pump_carrier {sys.argv[8]}')
-# print(f'dump_carrier {sys.argv[9]}')
-# print(f'bandwidth {sys.argv[10]}')
-# print(f'grid dimension (#points) {sys.argv[11]}')
-# print(f'storing result in filename: {sys.argv[12]}')
+print('calling python script with')
+print(f'file {sys.argv[1]}')
+print(f'pulse option {sys.argv[2]}')
+print(f'color #1 carrier {sys.argv[3]}')
+print(f'color #2 carrier {sys.argv[4]}')
+print(f'color #1 bandwidth {sys.argv[5]}')
+print(f'color #2 bandwidth {sys.argv[6]}')
+print(f'color #1 polarization {sys.argv[7]}')
+print(f'color #2 polarization {sys.argv[8]}')
+print(f'grid dimension (#points) {sys.argv[9]}')
+print(f'storing result in filename: {sys.argv[10]}')
 
 ###############################
 #DEFINITION OF INPUT VARIABLES
 ###############################
+
+'''
+Script is called with the following input:
+1. file input
+2. pulse polarisation option (see dictionary)
+3. carrier frequency color 1
+4. carrier frequency color 2 (optional)
+5. bandwidth color 1
+6. bandwidth color 2 (optional)
+7. polarization color 1
+8. polarization color 2
+9. frequency grid dimension (#point)
+10. Output filename
+'''
 
 polarization_dict = {'x' : np.array([1,0,0]),
                      'z' : np.array([0,0,1]),
@@ -52,63 +57,25 @@ polarization_dict = {'x' : np.array([1,0,0]),
                      }
 
 
-# file = sys.argv[1]
-# pulse_option = sys.argv[2]
-# dim = int(sys.argv[9])
-# outputfilename = sys.argv[10]
+file = sys.argv[1]
+pulse_option = sys.argv[2]
 
-# path_2P = ''
-# file_2P = file
+if pulse_option == '1C':
+    freq_carrier = float(sys.argv[3])/energy_1auE_eV
+    bandwidth = float(sys.argv[5])/energy_1auE_eV
+    pol = polarization_dict[sys.argv[7]]
+    print(f'pol check {pol}')
 
-# if pulse_option == '1C':
-#     freq_carrier = float(sys.argv[3])/energy_1auE_eV
-#     bandwidth = float(sys.argv[5])/energy_1auE_eV
-#     pol = polarization_dict[sys.argv[7]]
-#     print(f'pol check {pol}')
+elif pulse_option == '2C':
+    carrier_C1 = float(sys.argv[3])/energy_1auE_eV
+    carrier_C2 = float(sys.argv[4])/energy_1auE_eV
+    bandwidth_C1 = float(sys.argv[5])/energy_1auE_eV
+    bandwidth_C2 = float(sys.argv[6])/energy_1auE_eV
+    pol_C1 = polarization_dict[sys.argv[7]]
+    pol_C2 = polarization_dict[sys.argv[8]]
 
-# elif pulse_option == '2C':
-#     carrier_C1 = float(sys.argv[3])/energy_1auE_eV
-#     carrier_C2 = float(sys.argv[4])/energy_1auE_eV
-#     bandwidth_C1 = float(sys.argv[5])/energy_1auE_eV
-#     bandwidth_C2 = float(sys.argv[6])/energy_1auE_eV
-#     pol_C1 = polarization_dict[sys.argv[7]]
-#     pol_C2 = polarization_dict[sys.argv[8]]
-
-# pol_p = np.array([0,0,0])
-# pol_d = np.array([0,0,0])
-
-# pol_p[0] = sys.argv[2]
-# pol_p[1] = sys.argv[3]
-# pol_p[2] = sys.argv[4]
-# pol_d[0] = sys.argv[5]
-# pol_d[1] = sys.argv[6]
-# pol_d[2] = sys.argv[7]
-
-# if not pol_p.any() and not pol_d.any():
-# 	print('random over 100000 samples')
-# 	pol_r = np.mean(np.random.uniform(low=-1, high=1, size=(3,100000),axis=1)) #size = (3,#num_samples)
-# 	pol_r_n = pol_r/np.sqrt(np.sum(pol_r**2))
-# 	pol_p = pol_r_n
-# 	pol_d = pol_r_n
-# 	print(pol_r_n,np.sqrt(np.sum(pol_r_n**2)))
-# else:
-# 	print('NOT random!!!')
-
-# print(f'pol_p check {pol_p}')
-# print(f'pol_d check {pol_d}')
-
-# pump_carrier = float(sys.argv[8])/energy_1auE_eV #229.73/     #input values in eV->converted to a.u.
-# dump_carrier = float(sys.argv[9])/energy_1auE_eV #229.73/energy_1auE_eV
-# bandwidth = float(sys.argv[10])/energy_1auE_eV # 8/energy_1auE_eV   
-
-# dim = int(sys.argv[11])
-
-# outputfilename = sys.argv[12]
-
-# path_2P = ''
-# file_2P = file
-          
-
+dim = int(sys.argv[9])
+outputfilename = sys.argv[10]
 
 """
 Module with class TicToc to replicate the functionality of MATLAB's tic and toc.
@@ -195,11 +162,7 @@ print('loading constants')
 #READ-OUT QCHEM OUTPUT
 #######################
 
-path = '../dm_printout/calc/'
-# path = '/home/emanuele/mount/OCS/SRIXS/OK/'
-filename = 'OCS-OK-XAS-SRIXS.out'
-
-qchem_out_data = qchem_parse.output_parse(path,filename)
+qchem_out_data = qchem_parse.output_parse(file)
 
 block_A_dim = qchem_out_data['state']['num_val_states']+1  #adding 1 for the ground state
 block_C_dim = qchem_out_data['state']['num_core_states']
@@ -294,15 +257,14 @@ def RIXS_mom_sym(TM_AB,TM_BA):
     return np.multiply(TM_mod,TM_phase)
 
 #Definition of the pump array to be used for calculations (i.e. more points than the Qchem's output)
-dim = 1480  #temporary
 pump_array = np.linspace(min(qchem_out_data['transition']['block_A']['RIXS_grid_p']),max(qchem_out_data['transition']['block_A']['RIXS_grid_p']),dim)
 
-#REXS tensor - output of the new REXS vector from the interpolation function and broadcast. Broadcast shape = (#omega_p,#omega_d,3,3)
-AA_a = np.broadcast_to(RIXS_interpolation(qchem_out_data['transition']['block_A']['REXS_tm'],qchem_out_data['transition']['block_A']['RIXS_grid_p'],pump_array,'REXS')[:,np.newaxis,:,:],(dim,dim,3,3))
+#REXS tensor - output of the new REXS vector from the interpolation function and broadcast. Broadcast shape = (#omega_d,#omega_p,3,3)
+AA_a = np.broadcast_to(RIXS_interpolation(qchem_out_data['transition']['block_A']['REXS_tm'],qchem_out_data['transition']['block_A']['RIXS_grid_p'],pump_array,'REXS'),(dim,dim,3,3))
 
-#RIXS tensor - output of the new RIXS tensor from the interpolation function, broadcast and averaging. Broadcast shape = (#val_states,#omega_p,#omega_d,3,3)
-AB_a = np.broadcast_to(RIXS_interpolation(qchem_out_data['transition']['block_A']['RIXS_AB_tm'],qchem_out_data['transition']['block_A']['RIXS_grid_p'],pump_array,'RIXS')[:,:,np.newaxis,:,:],(block_A_dim-1,dim,dim,3,3))
-BA_a = np.broadcast_to(RIXS_interpolation(qchem_out_data['transition']['block_A']['RIXS_BA_tm'],qchem_out_data['transition']['block_A']['RIXS_grid_p'],pump_array,'RIXS')[:,:,np.newaxis,:,:],(block_A_dim-1,dim,dim,3,3))
+#RIXS tensor - output of the new RIXS tensor from the interpolation function, broadcast and averaging. Broadcast shape = (#val_states,#omega_d,#omega_p,3,3)
+AB_a = np.broadcast_to(RIXS_interpolation(qchem_out_data['transition']['block_A']['RIXS_AB_tm'],qchem_out_data['transition']['block_A']['RIXS_grid_p'],pump_array,'RIXS')[:,np.newaxis,:,:,:],(block_A_dim-1,dim,dim,3,3))
+BA_a = np.broadcast_to(RIXS_interpolation(qchem_out_data['transition']['block_A']['RIXS_BA_tm'],qchem_out_data['transition']['block_A']['RIXS_grid_p'],pump_array,'RIXS')[:,np.newaxis,:,:,:],(block_A_dim-1,dim,dim,3,3))
 
 #Calculation of symmetrized RIXS_TM
 RIXS_AB_a = RIXS_mom_sym(AB_a,BA_a)
@@ -337,25 +299,45 @@ for index in range(0,block_A_dim,1):
 #Averaged tensors
 #Only the RIXS excitations from the GS (index=0) to the VE (index>0) are considered.
 
+print('RIXS read')
 
-'''
 ##################
 #PULSE DEFINITION 
 ##################
 
-print('RIXS read')
-
-#Definition of Gaussian functions in the frequency domain
-
 def gauss_freq_1D(omega,omega_carrier,time_shift,alpha,amplitude,pol_v):
+    '''
+    Defines 1D Gaussian pulse envelope in frequency domain.
+
+    Arguments: omega = frequency array
+               omega_carrier = carrier frequency
+               time_shift = time shift (a.u.t.) with respect to time zero.
+               alpha = ((bandwidth*pi)**2)/(2*log(2))
+               amplitude = E_0
+               pol_v = polarization vector
+    Returns: pulse array of shaep (pol_v,omega)
+    '''
+
     shift_factor = np.exp(complex(0,1)*(omega)*time_shift)
     envelope = np.exp(-(((omega-omega_carrier)**2)/(4*alpha)))
-    return(np.einsum('x,f->xf',pol_v,amplitude*shift_factor*envelope))
+    return np.einsum('x,f->xf',pol_v,amplitude*shift_factor*envelope)
 
 def gauss_freq_2D(omega,omega_carrier,time_shift,alpha,amplitude,pol_v):
+    '''
+    Defines 2D Gaussian pulse envelope in frequency domain.
+
+    Arguments: omega = frequency grid
+               omega_carrier = carrier frequency
+               time_shift = time shift (a.u.t.) with respect to time zero.
+               alpha = ((bandwidth*pi)**2)/(2*log(2))
+               amplitude = E_0
+               pol_v = polarization vector
+    Returns: pulse array of shaep (pol_v,omega)
+    '''
+
     shift_factor = np.exp(complex(0,1)*(omega)*time_shift)
     envelope = np.exp(-(((omega-omega_carrier)**2)/(4*alpha)))
-    return(np.einsum('x,pd->xpd',pol_v,amplitude*shift_factor*envelope))
+    return np.einsum('x,pd->xpd',pol_v,amplitude*shift_factor*envelope)
 
 #The pulse is defined as E(\omega)=|E(\omega)|e^{i\phi(\omega)}.
 #E(\omega) and E(\omega)* differ in the sign of the exponential. The phase \phi(\omega) is set to 0 in testing.
@@ -488,6 +470,7 @@ pulse_matrix = np.einsum('xpd,ypd->xypd',pump_freq,np.conjugate(dump_freq)).asty
 #plt.colorbar(spectrum)
 #plt.show()
 
+
 #####################
 #XAS WP COEFFICIENTS
 #####################
@@ -506,12 +489,22 @@ print('Decay rate: %f a.u.'%decay_rate)
 print('Lifetime: %f fs'%lifetime)
 
 def integrand(pulse,frequency,energy,dipole,gamma_m,time):
-    
+    '''
+    Defines the integrand function of first order coefficients integrand
+
+    Arguments: pulse = pulse array definition on frequency domain of shape (3,\omega)
+               dipole = transition dipole moment array of shape (3)
+               time = time array representing the time span to calculate integral.
+               energy = transition energy (with respect to GS) of excited state.
+               frequency = frequency domain of the integral.
+    Returns: integrand of shape (time, frequency)
+    '''
+
     numerator = np.exp(complex(0,1)*(energy-frequency-complex(0,1)*(gamma_m/2))*time)
     denominator = energy-frequency-(complex(0,1)*(gamma_m/2))
 
     #introduced the dot product between the vectorial pulse and the dipole moment
-    return(np.einsum('xf,x,tf->tf',pulse,dipole,numerator/denominator,optimize='optimal'))
+    return np.einsum('xf,x,tf->tf',pulse,dipole,numerator/denominator,optimize='optimal')
 
                        
 def integrand_cc(pulse,frequency,energy,dipole,gamma_m,time_grid):
@@ -519,20 +512,26 @@ def integrand_cc(pulse,frequency,energy,dipole,gamma_m,time_grid):
     numerator = np.exp(-complex(0,1)*(energy-frequency+complex(0,1)*(gamma_m/2))*time)
     denominator = energy-frequency+(complex(0,1)*(gamma_m/2))
     
-    return(pulse*dipole*(numerator))#/denominator))
-
-#Definition of the function for the transition from interaction to Schroedinger picture
-#With 'sign' the transition factor for the bra or ket expansions can be controlled
+    return pulse*dipole*(numerator)#/denominator)
 
 def schroedinger_p(time,energy,gamma_m):
-    return(np.exp(-complex(0,1)*(energy-complex(0,1)*(gamma_m/2))*time))
+    '''
+    Defines array for conversion from interaction to Schroedinger picture.
+
+    Arguments: time = time array over which the wp coefficients are calculated.
+               energy = transition energy of each state (with respect to GS)
+               gamma_m = decay rate of the state.
+    Returns: conversion factors array (num_states, time)
+    '''
+
+    return np.exp(-complex(0,1)*(energy-complex(0,1)*(gamma_m/2))*time)
 #     return(np.exp(-complex(0,1)*energy*time_array))
 
 
 #Initialisation of the arrays of coefficients
 
-c = np.zeros((num_val_states+num_core_states,len(time_array)),dtype=complex)
-c_cc = np.zeros((num_val_states+num_core_states,len(time_array)),dtype=complex)
+c = np.zeros((block_A_dim+block_C_dim,len(time_array)),dtype=complex)
+c_cc = np.zeros((block_A_dim+block_C_dim,len(time_array)),dtype=complex)
 
 c[0,:]+=1
 
@@ -546,18 +545,25 @@ freq_grid,time_grid = np.meshgrid(freq_array,time_array)
 #Integrating over the frequency axis, the coefficients as a function of time are obtained.
 #The t-dependent coefficients for each state are stored in an array of shape (#states,length_time_array)
 
-for state in range(num_val_states,num_val_states+num_core_states):
+for state in range(block_A_dim,block_A_dim+block_C_dim):
     c[state,:] += schroedinger_p(time_array,en_array[0,state],decay_rate)*((1/(math.sqrt(2*np.pi)))*sp.integrate.trapz(integrand(pulse_1P,freq_grid,en_array[0,state],dip_array[0,state],decay_rate,time_grid),dx=step_freq,axis=1))
 
 #######################
 #SRIXS WP COEFFICIENTS
 #######################
 
-
-#Definition of the pre-factor function
-#The function uses the numexpr package for more efficient evaluation of the vectorial functions
-
 def prefactor_red(energy_eq,time,pulse_mom,gamma_k):
+    '''
+    Calculates the exponential pre-factor (coming before pulse and RIXS TM).
+    Utilizes the numexpr package for more efficient evaluation of vectorial functions.
+
+    Arguments: energy_eq = \omega_kg - \omega_p + \omega_d
+               pulse_mom = pulse_matrix * RIXS_TM
+               gamma_k = decay rate valence-excited states (set 0 because of analytical approach)
+               time = time in a.u. at which prefactor is evaluated.
+    Returns: 2D frequency grid over which prefactor function is evaluated.
+    '''
+
     numerator = ne.evaluate('exp((complex(0,1)*energy_eq+(gamma_k/2))*time)')
     denominator = ne.evaluate('energy_eq-complex(0,1)*(gamma_k/2)')
     integrand = ne.evaluate('(numerator/denominator)*pulse_mom')
@@ -568,10 +574,16 @@ def prefactor_red(energy_eq,time,pulse_mom,gamma_k):
 #     denominator = ne.evaluate('energy_eq+complex(0,1)*(gamma_k/2)')
 #     return(ne.evaluate('(numerator/denominator)*pulse_mom'))
 
-
-#Definition of the function to calculate the wp coefficients with the strip method
-
 def wp_calc_opt(time_array, index, low, up, f, f_prime, resonance):
+    '''
+    Calculates the wp coefficients relative to GS and valence-excited states.
+    Utilizes a numerical technique outsied of the strip and an analytical approach within the strip.
+
+    Arguments: time_array = array of time over which to calculate the integral
+               index = GS=0; VE>0
+               low, up, f, f_prime, resonance = information on the strip from compute_strip_stats
+    Returns: WP coefficient as a function of time.
+    '''
     
     time_begin = time_array[0]
     time_step = np.unique(np.diff(time_array))  #np.unique->finds unique elements of array; np.diff->calculates discrete difference between elements
@@ -678,7 +690,7 @@ grid_dim = pump_grid.shape[0]
 print(en_array.shape)
 
 pulse_mom = np.einsum('ijpdxy,xypd->ijpd',RIXS_TM,pulse_matrix,optimize='optimal')
-energy_eq = np.broadcast_to(en_array[0:num_val_states,0:num_val_states,np.newaxis,np.newaxis],pulse_mom.shape)-np.broadcast_to(pump_grid[np.newaxis,np.newaxis,...],pulse_mom.shape)+np.broadcast_to(dump_grid[np.newaxis,np.newaxis,...],pulse_mom.shape)
+energy_eq = np.broadcast_to(en_array[0:block_A_dim,0:block_A_dim,np.newaxis,np.newaxis],pulse_mom.shape)-np.broadcast_to(pump_grid[np.newaxis,np.newaxis,...],pulse_mom.shape)+np.broadcast_to(dump_grid[np.newaxis,np.newaxis,...],pulse_mom.shape)
 
 delta = 2.25e-2
 # delta = 2e-2
@@ -687,6 +699,16 @@ step_size = pump_grid[1][1]-pump_grid[1][0]  #defining the grid step size
 
 # uses global variable: grid_dim, delta, energy_eq, pulse_mom
 def compute_strip_stats(index):
+    '''
+    Calculates quantities needed to the analytical form of the strip integral for GS and each valence-excited state.
+    The strip is defined according to its center and its width (i.e. delta parameter.)
+
+    Arguments: state index (=0: GS, >0: valence-excited)
+    Returns: resonance_strip = grid points corresponding to strip
+             low_null, up_null = grid points corresponding to strip's lower and upper point.
+             f_x0, f_prime_x0 = evaluation of pulse_mom and its first derivative on the strip.
+    '''
+
     #Resonance condition array. Points where the resonance condition is satisfied have value 0.
     resonance = energy_eq[0,index,...].round(3)
     #Coordinates of strip points within a +-delta from the center. shape = (coordinate,#points) => row=0, col=1
@@ -726,7 +748,6 @@ def compute_strip_stats(index):
     #for the non-zero strip, the upper and lower limit are mismatched since the grid curtails the non-zero lower limit.
     #To account for this mismatch between upper and lower limits, the upper limit is calculated by considering the the x+1,y+1 starting coordinate (instead of the x,y+1).
 
-
     if index == 0:
         #Lower limit
         low_null = np.vstack((np.arange(0,row_final_low+1,1),np.arange(col_initial,col_final_up+1,1)))
@@ -757,11 +778,15 @@ num_processes = int(np.round(time_array.size/100))+1
 
 ####
 
-#INTEGRAL COMPUTATION
-#Strip data from compute_stri_stats for each state (corresponding to index)
-#Strip data passed to wp_calc_opt and then parallelisation
-
 def compute_integral(index):
+    '''
+    Computes the double integral. Strip data from compute_stri_stats for each valence-excited state.
+    Strip data passed to wp_calc_opt, calculate the intregral and then parallelisation.
+
+    Arguments: state index (=0: GS, >0: valence-excited)
+    Returns: wp coefficient as a function of time relative to state index.
+    '''
+
     low, up, f, f_prime, resonan_strip = compute_strip_stats(index)
     pulse_mom[0,index,resonan_strip[0],resonan_strip[1]] = 0 #CHECK FOR REDUNDANCY
     result = np.zeros((time_array.size),dtype=np.complex64)
@@ -785,7 +810,7 @@ def compute_integral(index):
     return result
 
 
-states = range(num_val_states) # 0, 1, 2, num_val_states-1
+states = range(block_A_dim) # 0, 1, 2, num_val_states-1
 timer.tic()
 for index in states:
     res = compute_integral(index)
@@ -797,8 +822,7 @@ timer.toc(msg='loop time')
 DM = np.einsum('it,jt->ijt',c,np.conjugate(c))
 
 #Saving data in external dictionary
-WP_data = {'Density_Matrix': DM, 'time_array': time_array, 'pulse_time': pulse_time ,'#_val_states': num_val_states, '#_core_states': num_core_states}
+WP_data = {'Density_Matrix': DM, 'time_array': time_array, 'pulse_time': pulse_time ,'#_val_states': block_A_dim, '#_core_states': block_C_dim}
 np.save(outputfilename,WP_data)
 
 print('finished')
-'''
