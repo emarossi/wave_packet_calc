@@ -362,7 +362,7 @@ irradiance_W_cm2_au = 3.51e16 #(W/cm^2)/a.u.
 
 ### SETTINGS ###
 
-irradiance = 1e18/irradiance_W_cm2_au
+irradiance = 1e16/irradiance_W_cm2_au
 E_0 = math.sqrt((2*irradiance)/(epsilon_0_au*137))   #pulse's height at peak
 bw_Hz_au = ((bandwidth*energy_1auE_eV)/planck_eV_Hz)*time_1aut_s
 alpha = ((bw_Hz_au*np.pi)**2)/(2*math.log(2))
@@ -692,8 +692,9 @@ print(en_array.shape)
 pulse_mom = np.einsum('ijpdxy,xypd->ijpd',RIXS_TM,pulse_matrix,optimize='optimal')
 energy_eq = np.broadcast_to(en_array[0:block_A_dim,0:block_A_dim,np.newaxis,np.newaxis],pulse_mom.shape)-np.broadcast_to(pump_grid[np.newaxis,np.newaxis,...],pulse_mom.shape)+np.broadcast_to(dump_grid[np.newaxis,np.newaxis,...],pulse_mom.shape)
 
-delta = 2.25e-2
-# delta = 2e-2
+delta = 0.725e-2 #OCS
+#delta = 0.75e-2 #OXAZOLE
+
 step_size = pump_grid[1][1]-pump_grid[1][0]  #defining the grid step size
 
 
