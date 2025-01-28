@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import scipy as sp
 import itertools
 import numexpr as ne
-#import cupy as cp
+import qchem_parse
 import sys
 
 
@@ -17,7 +17,6 @@ time_1aut_s = sp.constants.physical_constants['atomic unit of time'][0]
 planck_eV_Hz = sp.constants.physical_constants['Planck constant in eV/Hz'][0]
 epsilon_0_au = sp.constants.epsilon_0/sp.constants.physical_constants['atomic unit of permittivity'][0]
 energy_1auE_eV = sp.constants.physical_constants['hartree-electron volt relationship'][0]
-
 
 print('calling python script with')
 print(f'file {sys.argv[1]}')
@@ -31,17 +30,23 @@ print(f'color #2 polarization {sys.argv[8]}')
 print(f'grid dimension (#points) {sys.argv[9]}')
 print(f'storing result in filename: {sys.argv[10]}')
 
-# print(f'pol_p {sys.argv[2]} {sys.argv[3]} {sys.argv[4]}')
-# print(f'pol_d {sys.argv[5]} {sys.argv[6]} {sys.argv[7]}')
-# print(f'pump_carrier {sys.argv[8]}')
-# print(f'dump_carrier {sys.argv[9]}')
-# print(f'bandwidth {sys.argv[10]}')
-# print(f'grid dimension (#points) {sys.argv[11]}')
-# print(f'storing result in filename: {sys.argv[12]}')
-
 ###############################
 #DEFINITION OF INPUT VARIABLES
 ###############################
+
+'''
+Script is called with the following input:
+1. file input
+2. pulse polarisation option (see dictionary)
+3. carrier frequency color 1
+4. carrier frequency color 2 (optional)
+5. bandwidth color 1
+6. bandwidth color 2 (optional)
+7. polarization color 1
+8. polarization color 2
+9. frequency grid dimension (#point)
+10. Output filename
+'''
 
 polarization_dict = {'x' : np.array([1,0,0]),
                      'z' : np.array([0,0,1]),
@@ -54,11 +59,6 @@ polarization_dict = {'x' : np.array([1,0,0]),
 
 file = sys.argv[1]
 pulse_option = sys.argv[2]
-dim = int(sys.argv[9])
-outputfilename = sys.argv[10]
-
-path_2P = ''
-file_2P = file
 
 if pulse_option == '1C':
     freq_carrier = float(sys.argv[3])/energy_1auE_eV
@@ -74,41 +74,8 @@ elif pulse_option == '2C':
     pol_C1 = polarization_dict[sys.argv[7]]
     pol_C2 = polarization_dict[sys.argv[8]]
 
-# pol_p = np.array([0,0,0])
-# pol_d = np.array([0,0,0])
-
-# pol_p[0] = sys.argv[2]
-# pol_p[1] = sys.argv[3]
-# pol_p[2] = sys.argv[4]
-# pol_d[0] = sys.argv[5]
-# pol_d[1] = sys.argv[6]
-# pol_d[2] = sys.argv[7]
-
-# if not pol_p.any() and not pol_d.any():
-# 	print('random over 100000 samples')
-# 	pol_r = np.mean(np.random.uniform(low=-1, high=1, size=(3,100000),axis=1)) #size = (3,#num_samples)
-# 	pol_r_n = pol_r/np.sqrt(np.sum(pol_r**2))
-# 	pol_p = pol_r_n
-# 	pol_d = pol_r_n
-# 	print(pol_r_n,np.sqrt(np.sum(pol_r_n**2)))
-# else:
-# 	print('NOT random!!!')
-
-# print(f'pol_p check {pol_p}')
-# print(f'pol_d check {pol_d}')
-
-# pump_carrier = float(sys.argv[8])/energy_1auE_eV #229.73/     #input values in eV->converted to a.u.
-# dump_carrier = float(sys.argv[9])/energy_1auE_eV #229.73/energy_1auE_eV
-# bandwidth = float(sys.argv[10])/energy_1auE_eV # 8/energy_1auE_eV   
-
-# dim = int(sys.argv[11])
-
-# outputfilename = sys.argv[12]
-
-# path_2P = ''
-# file_2P = file
-          
-
+dim = int(sys.argv[9])
+outputfilename = sys.argv[10]
 
 """
 Module with class TicToc to replicate the functionality of MATLAB's tic and toc.
@@ -195,279 +162,53 @@ print('loading constants')
 #READ-OUT QCHEM OUTPUT
 #######################
 
-#The code in this section reads the output from Qchem. The following variables are read:
-#1-photon properties: GS->VE (A), GS->CE (B) and CE->CE (C), transition energies and transition dipole moments.
-#2-photon properties: GS->GS (REXS) and GS->VE (RIXS) transition moments and relative frequency grids.
+qchem_out_data = qchem_parse.output_parse(file)
 
-def RIXS_TM_mod(row):
-    
-    if 'A --> B' in row or 'B --> A' in row:
-        temp_a = row.split('     ')[1].replace(' i (','').replace(')','').replace(' ','') + 'j'.strip()
-        temp_b = row.split('     ')[2].replace(' i (','').replace(')','').replace(' ','') + 'j'.strip()
-        temp_c = row.split('     ')[3].replace(' i (','').replace(')','').replace(' ','') + 'j'.strip()
-        
-    else:
-        temp_a = row.split('     ')[2].replace(' i (','').replace(')','').replace(' ','') + 'j'.strip()
-        temp_b = row.split('     ')[3].replace(' i (','').replace(')','').replace(' ','') + 'j'.strip()
-        temp_c = row.split('     ')[4].replace(' i (','').replace(')','').replace(' ','') + 'j'.strip()
-    
-    if '+-' in temp_a:
-        temp_a = temp_a.replace('+-','-')
-
-    if '+-' in temp_b:
-        temp_b = temp_b.replace('+-','-')
-
-    if '+-' in temp_c:
-        temp_c = temp_c.replace('+-','-')
-            
-    return([complex(temp_a),complex(temp_b),complex(temp_c)])
-
-def REXS_TM_mod(row):
-    
-    temp_a = row.split('     ')[2].replace(' i (','').replace(')','').replace(' ','') + 'j'.strip()
-    temp_b = row.split('     ')[3].replace(' i (','').replace(')','').replace(' ','') + 'j'.strip()
-    temp_c = row.split('     ')[4].replace(' i (','').replace(')','').replace(' ','') + 'j'.strip()
-    
-    if '+-' in temp_a:
-        temp_a = temp_a.replace('+-','-')
-
-    if '+-' in temp_b:
-        temp_b = temp_b.replace('+-','-')
-
-    if '+-' in temp_c:
-        temp_c = temp_c.replace('+-','-')
-        
-    return([complex(temp_a),complex(temp_b),complex(temp_c)])
-
-def dipole_moment_processing(vector_string):
-
-    #This function imports the three components of the transition dipole and assembles them in a numpy array
-    #The dot product between the polarization vector and the transition dipole vector is given in output.
-    #The absolute value of the dot product is considered, since the sign is random
-    
-    x = float(vector_string.split('(')[1].split(',')[0].replace('X','').strip())
-    y = float(vector_string.split('(')[1].split(',')[1].replace('Y','').strip())
-    z = float(vector_string.split('(')[1].split(',')[2].replace('Z','').replace(')','').strip())
-
-    return(list([x,y,z]))
-
-
-
-#Importing all the data from Qchem's output files
-
-label_list = ['GS']
-
-num_val_states = 1    #ground + #valence-excited states considered in the transition
-num_core_states = 0
-
-#1-photon: checkpoint variables
-block_A = False
-block_B = False
-block_C = False
-block_AB = False
-
-#1-photon: list initialisation
-A_en = []
-A_dip_AB = []; A_dip_BA = []
-B_en = []
-B_dip_AB = []; B_dip_BA = []
-C_en = []
-C_dip_AB = []; C_dip_BA = []
-
-#2-photon: checkpoint variables
-val_out = False  #Output of data relative to a couple of states
-RIXS_out = False   #Output of RIXS tensor (relative to a couple of frequency points)
-REXS_out = False   #Output of REXS tensor (relative to an omega_p point)
-
-#2-photon: list initialisation
-index_ab = [(0,0)]  #list of tuples with indeces of A and B states involved in A->B. Initialised with (0,0) for REXS.
-AB = []; BA = []; AA = []  #lists of RIXS AB, BA and REXS AA tensors
-pump_l = []; dump_l = []   #lists storing the pump and dump grid parameters
-
-with open(path_2P+file_2P,'r') as f:    #Sulfur L1-Edge
-# with open(path_2P+'OCS-SRIXS-OK12V-40r-0_027s_HF.out','r') as f:     #Oxygen K-Edge
-
-    for count, line in enumerate(f):
-        
-        #Number and labels of the states involved
-        
-        if 'EOMEE transition' in line and 'CVS' not in line:
-            label_list.append('VE-'+line.split(' ')[3].strip())
-            num_val_states += 1
-            
-        elif 'CVS-EOMEE transition' in line:
-            label_list.append('CE-'+line.split(' ')[3].strip())
-            num_core_states += 1
-
-        #####################
-        #1-photon properties#
-        #####################
-        
-        #BLOCKS A+B: Finding out where the blocks of the matrix output are printed out
-        if ('State A: eomee_ccsd/rhfref/singlets:' in line and 'cvs' not in line) or 'State A: ccsd:' in line:
-            index_a_temp = int(line.split(':')[2].split('/')[0])
-            block_AB = True
-        
-        #BLOCK A: GS+valence_excited <-> GS+valence_excited; transition energies and dipole moments
-        
-        #Switch
-        if block_AB == True and 'State B: eomee_ccsd/rhfref/singlets:' in line:
-            index_ab.append((index_a_temp,int(line.split(':')[2].split('/')[0])))
-            index_A = count
-            block_A = True
-            
-        #Data aquisition
-        if block_A == True and count in range(index_A+1,index_A+5):
-            
-            if count == index_A+1:
-                A_en.append(float(line.split('=')[2].strip().replace('eV','').strip()))
-                
-            if count == index_A+3:
-                A_dip_AB.append(dipole_moment_processing(line))
-                
-            if count == index_A+4:
-                A_dip_BA.append(dipole_moment_processing(line))
-                block_A = False
-                block_AB = False
-        
-        # #BLOCK B: GS+valence_excited <-> core_excited; transition energies and dipole moments
-        
-        #Switch
-        if block_AB == True and 'State B: cvs_eomee_ccsd/rhfref/singlets:' in line:
-            
-            index_B = count
-            block_B = True
-            block_AB = False
-            
-        #Data aquisition
-        if block_B == True and count in range(index_B+1,index_B+5):
-            
-            if count == index_B+1:
-                B_en.append(float(line.split('=')[2].strip().replace('eV','').strip()))
-                
-            if count == index_B+3:
-                B_dip_AB.append(dipole_moment_processing(line))
-                
-            if count == index_B+4:
-                B_dip_BA.append(dipole_moment_processing(line))
-                block_B = False
-                block_AB = False
-        
-        # #BLOCK C: core_excited <-> core_excited; transition energies and dipole moments
-        
-        #Switch
-        if 'State A: cvs_eomee_ccsd/rhfref/singlets:' in line:
-            index_C = count
-            block_C = True
-        #Data aquisition
-        if block_C == True and count in range(index_C+2,index_C+6):
-                      
-            if count == index_C+2:
-                C_en.append(float(line.split('=')[2].strip().replace('eV','').strip()))
-              
-            if count == index_C+4:
-                C_dip_AB.append(dipole_moment_processing(line))
-              
-            if count == index_C+5:
-                C_dip_BA.append(dipole_moment_processing(line))
-                block_C = False
-        
-        #####################
-        #2-photon properties#
-        #####################
-        
-        #REXS OUTPUT
-        
-        if 'CCSD REXS Moments M_IJ, I,J=X,Y,Z (a.u.):' in line:
-            REXS_out = True
-            index_REXS = count
-            
-        if 'REXS Scattering Strength Tensor S (a.u.):' in line:
-            REXS_out = False
-        
-        if REXS_out == True and count in range(index_REXS+1,index_REXS+4):
-            AA.append(REXS_TM_mod(line))
-        
-#         #VALENCE STATE TRANSITION PROPERTIES
-#         #Storing the couple of A,B indeces 
-        
-#         if 'State A: eomee_ccsd/rhfref/singlets:' in line or 'State A: ccsd:' in line:
-#             index_a_temp = int(line.split(':')[2].split('/')[0])
-        
-#         if 'State B: eomee_ccsd/rhfref/singlets:' in line:
-#             index_ab.append((index_a_temp,int(line.split(':')[2].split('/')[0])))
-#             val_out = True
-#             index_state = count
-            
-        #RIXS OUTPUT
-            
-        if 'RIXS Moments M_IJ (A-->B), I,J=X,Y,Z (a.u.):' in line:
-            RIXS_out = True
-            index_RIXS = count
-            
-        if 'RIXS Scattering Strength Tensor S (a.u.):' in line:
-            RIXS_out = False
-            
-        if RIXS_out == True and count in range(index_RIXS+1,index_RIXS+4):
-            AB.append(RIXS_TM_mod(line))
-            
-        if RIXS_out == True and count in range(index_RIXS+5,index_RIXS+8):
-            BA.append(RIXS_TM_mod(line))
-            
-        #GRID OUTPUT
-            
-        if 'Absorbed photon' in line and len(index_ab) == 2:
-            pump_l.append(float(line.split('=')[1].replace('a.u.','').strip()))
-            
-        if 'Emitted photon' in line and len(index_ab) == 2:
-            dump_l.append(float(line.split('=')[1].replace('a.u.','').strip()))
+block_A_dim = qchem_out_data['state']['num_val_states']+1  #adding 1 for the ground state
+block_C_dim = qchem_out_data['state']['num_core_states']
 
 ###########################################################
 #1-PHOTON - ASSEMBLING TRANSITION ENERGY AND DIPOLE ARRAYS
 ###########################################################
 
-#A BLOCK: shape=(#valence_excited,#valence_excited)
+def dip_mom_sym(dip_AB,dip_BA):
+    '''
+    Symmetrizes EOM-CC dipole moments: dip = (sqrt(dip_AB*dip_BA))*sign(dip_AB)
 
-A_dip_array = np.zeros((num_val_states,num_val_states,3))
-A_en_array = np.zeros((num_val_states,num_val_states))
+    Arguments: arrays with dipole A->B and dipole_B->A; shape=(#A<->B transitions,3)
+    Returns: symmetrized dipole array; shape=(#A<->B transitions,3)
+    '''
+    dip_phase = np.sign(dip_AB)
+    dip_mod = np.sqrt(np.multiply(dip_AB,dip_BA))
+    return np.multiply(dip_mod,dip_phase)
 
-#For calculations considering all intrastate transitions
-# A_dip_array[np.triu_indices(num_val_states,k=1)]=(np.asmatrix(A_dip_AB)+np.asmatrix(A_dip_BA))/2  #for calculations with all intrastate transitions
-# A_en_array[np.triu_indices(num_val_states,k=1)] = np.array(A_en)  #for calculations with all intrastate transitions
-
-#For calculations considering only GS-->ES transitions
-A_dip_array[0,np.arange(1,num_val_states,1),:]=(np.asmatrix(A_dip_AB)+np.asmatrix(A_dip_BA))/2   #for calculation with only GS->ES transitions
-A_en_array[0,np.arange(1,num_val_states,1)] = np.array(A_en)   #for calculation with only GS->ES transitions
-
-A_dip_array += np.transpose(A_dip_array,axes=[1,0,2])
+#BLOCK A - energy array definition: shape=(GS+#valence_excited,GS+#valence_excited)
+A_en_array = np.zeros((block_A_dim,block_A_dim))
+A_en_array[0,np.arange(1,block_A_dim,1)] = np.array(qchem_out_data['transition']['block_A']['tr_energies'])   #for calculation with only GS->ES transitions
 A_en_array -= np.transpose(A_en_array)
 
-#B BLOCK: shape=(#valence_excited,#core_excited)
+#BLOCK A - dipole array definition: shape=(GS+#valence_excited,GS+#valence_excited,3)
+A_dip_array = np.zeros((block_A_dim,block_A_dim,3))
+A_dip_array[0,np.arange(1,block_A_dim,1),:] = dip_mom_sym(qchem_out_data['transition']['block_A']['AB_dipole'],qchem_out_data['transition']['block_A']['BA_dipole'])
+A_dip_array += np.transpose(A_dip_array,axes=[1,0,2])
 
-B_dip_array = np.zeros((num_val_states,num_core_states,3))
-B_en_array = np.zeros((num_val_states,num_core_states))
+#BLOCK B - energy array definition: shape=(GS+#valence_excited,#core_excited)
+B_en_array = np.zeros((block_A_dim,block_C_dim))
+B_en_array[0,np.arange(0,block_C_dim,1)] = np.array(qchem_out_data['transition']['block_B']['tr_energies'])
 
-#For calculations considering all intrastate transitions
-# B_dip_array = (np.array(B_dip_AB).reshape((num_val_states,num_core_states,3))+np.array(B_dip_BA).reshape((num_val_states,num_core_states,3)))/2
-# B_en_array = np.array(B_en).reshape((num_val_states,num_core_states))
+#BLOCK B - dipole array definition: shape=(GS+#valence_excited,#core_excited,3)
+B_dip_array = np.zeros((block_A_dim,block_C_dim,3))
+B_dip_array[0,np.arange(0,block_C_dim,1),:] = dip_mom_sym(qchem_out_data['transition']['block_B']['AB_dipole'],qchem_out_data['transition']['block_B']['BA_dipole'])
 
-#For calculations considering only GS-->ES transitions
-print(np.asmatrix(B_dip_AB).shape)
-B_dip_array[0,np.arange(0,num_core_states,1),:] = (np.asmatrix(B_dip_AB)+np.asmatrix(B_dip_BA))/2   
-B_en_array[0,np.arange(0,num_core_states,1)] = np.array(B_en)
-
-#C BLOCK: shape=(#core_excited,#core_excited)
-
-C_dip_array = np.zeros((num_core_states,num_core_states,3))
-C_en_array = np.zeros((num_core_states,num_core_states))
-
-#For calculations considering all intrastate transitions
-
-C_dip_array[np.triu_indices(num_core_states,k=1)]=(np.asmatrix(C_dip_AB)+np.asmatrix(C_dip_BA))/2
-C_dip_array += np.transpose(C_dip_array,axes=[1,0,2])
-
-C_en_array[np.triu_indices(num_core_states,k=1)] = np.array(C_en)
+#BLOCK C: energy array definition: shape=(#core_excited,#core_excited)
+C_en_array = np.zeros((block_C_dim,block_C_dim))
+C_en_array[np.triu_indices(block_C_dim,k=1)] = np.array(qchem_out_data['transition']['block_C']['tr_energies'])
 C_en_array -= np.transpose(C_en_array)
+
+#BLOCK C: dipole array definition: shape=(#core_excited,#core_excited,3)
+C_dip_array = np.zeros((block_C_dim,block_C_dim,3))
+C_dip_array[np.triu_indices(block_C_dim,k=1)] = dip_mom_sym(qchem_out_data['transition']['block_C']['AB_dipole'],qchem_out_data['transition']['block_C']['BA_dipole'])
+C_dip_array += np.transpose(C_dip_array,axes=[1,0,2])
 
 #Assembling the energy array and the dipole arrays =>((A,B),(B.t,C))
 #Energy array shape=(#valence_excited+#core_excited,#valence_excited+#core_excited)
@@ -480,65 +221,70 @@ dip_array = (np.concatenate((np.concatenate((A_dip_array,B_dip_array),axis=1),np
 #2-PHOTON - BUILDING REXS and RIXS TENSORS
 ###########################################
 
-#Interpolation: the function takes the REXS/RIXS tensors from Qchem and interpolates them.
-#The interpolated function is used to generate a tensor on a new grid defined by 'new_pump_array'.
+def RIXS_interpolation(TM_array,pump_list,new_p_array,process):
+    '''
+    Interpolates the REXS/RIXS transition moment arrays printed out by Qchem. Allows flexibility in the choice of frequency grid for integration.
 
-def RIXS_interpolation(RIXS_list,pump_list,new_pump_array,process):
-
-    global index_ab  #importing the index_ab
+    Arguments: TM_array = REXS TM array of shape (#omega_p,3,3) or RIXS TM array of shape (#num_val_states,#omega_p,3,3); 
+               pump_list = frequency array used by Qchem; 
+               new_p_array = new frequency array to express TMs;
+               process = RIXS or REXS.
+    Returns: REXS TM of shape (len(omega_p_array),3,3); RIXS TM of shape (#num_val_states,len(omega_p_array),3,3).
+    '''
 
     #REXS process: the tensor has a shape (#omega_p,3,3). Interpolation along the axis=0.
     if process == 'REXS':
-        real_part = sp.interpolate.CubicSpline(np.array(pump_list),np.array(RIXS_list,dtype='complex64').reshape((len(pump_list),3,3)).real,axis=0)
-        imag_part = sp.interpolate.CubicSpline(np.array(pump_list),np.array(RIXS_list,dtype='complex64').reshape((len(pump_list),3,3)).imag,axis=0)
+        real_part = sp.interpolate.CubicSpline(np.array(pump_list),TM_array.real,axis=0)
+        imag_part = sp.interpolate.CubicSpline(np.array(pump_list),TM_array.imag,axis=0)
     
     #RIXS process: the tensor has a shape (#VE_states,#omega_p,3,3). Interpolation along the axis=1.
     elif process == 'RIXS':
-        real_part = sp.interpolate.CubicSpline(np.array(pump_list),np.array(RIXS_list,dtype='complex64').reshape((len(index_ab)-1,len(pump_l),3,3)).real,axis=1)
-        imag_part = sp.interpolate.CubicSpline(np.array(pump_list),np.array(RIXS_list,dtype='complex64').reshape((len(index_ab)-1,len(pump_l),3,3)).imag,axis=1)
+        real_part = sp.interpolate.CubicSpline(np.array(pump_list),TM_array.real,axis=1)
+        imag_part = sp.interpolate.CubicSpline(np.array(pump_list),TM_array.imag,axis=1)
 
     #Putting together the real and imaginary parts of the tensors.
-    return(np.vectorize(complex)(real_part(new_pump_array),imag_part(new_pump_array)))
+    return np.vectorize(complex)(real_part(new_p_array),imag_part(new_p_array))
 
-#The REXS arrays are broadcasted to => (#omega_p,#omega_p,3,3)
-#The RIXS arrays are broadcasted to => (#AB_transitions,#omega_p,#omega_p,3,3)
-#The pump_grid has shape => (#omega_p,#omega_p). The dump grid is pump_grid only transposed.
+def RIXS_mom_sym(TM_AB,TM_BA):
+    '''
+    Symmetrizes RIXS TMs: TM_AB = (sqrt(TM_A->B*TM_B->A))*(TM_A->B/|TM_A->B|)
 
-#Defintion of the pump array to be used for calculations (i.e. more points than the Qchem's output)
-pump_array = np.linspace(min(pump_l),max(pump_l),dim)
+    Arguments: TM_A->B, TM_B->A
+    Returns: symmetrized RIXS TM_AB tensor of shape (#val_states,omega_p,omega_d,3,3)
+    '''
+    TM_phase = np.divide(TM_AB,np.abs(TM_AB), where=TM_AB != 0)
+    TM_mod = np.sqrt(np.multiply(TM_AB,TM_BA))
+    return np.multiply(TM_mod,TM_phase)
 
-#REXS tensor - output of the new REXS vector from the interpolation function and broadcast
-AA_a = np.broadcast_to(RIXS_interpolation(AA,pump_l,pump_array,'REXS'),(dim,dim,3,3))
+#Definition of the pump array to be used for calculations (i.e. more points than the Qchem's output)
+pump_array = np.linspace(min(qchem_out_data['transition']['block_A']['RIXS_grid_p']),max(qchem_out_data['transition']['block_A']['RIXS_grid_p']),dim)
 
-#RIXS tensor - output of the new RIXS tensor from the interpolation function, broadcast and averaging
+#REXS tensor - output of the new REXS vector from the interpolation function and broadcast. Broadcast shape = (#omega_d,#omega_p,3,3)
+AA_a = np.broadcast_to(RIXS_interpolation(qchem_out_data['transition']['block_A']['REXS_tm'],qchem_out_data['transition']['block_A']['RIXS_grid_p'],pump_array,'REXS'),(dim,dim,3,3))
 
-#right and left calculation
-AB_a = np.broadcast_to(RIXS_interpolation(AB,pump_l,pump_array,'RIXS')[:,np.newaxis,:,:,:],(len(index_ab)-1,dim,dim,3,3))
-BA_a = np.broadcast_to(RIXS_interpolation(BA,pump_l,pump_array,'RIXS')[:,np.newaxis,:,:,:],(len(index_ab)-1,dim,dim,3,3))
+#RIXS tensor - output of the new RIXS tensor from the interpolation function, broadcast and averaging. Broadcast shape = (#val_states,#omega_d,#omega_p,3,3)
+AB_a = np.broadcast_to(RIXS_interpolation(qchem_out_data['transition']['block_A']['RIXS_AB_tm'],qchem_out_data['transition']['block_A']['RIXS_grid_p'],pump_array,'RIXS')[:,np.newaxis,:,:,:],(block_A_dim-1,dim,dim,3,3))
+BA_a = np.broadcast_to(RIXS_interpolation(qchem_out_data['transition']['block_A']['RIXS_BA_tm'],qchem_out_data['transition']['block_A']['RIXS_grid_p'],pump_array,'RIXS')[:,np.newaxis,:,:,:],(block_A_dim-1,dim,dim,3,3))
 
-#averaged calculation (averaging between right and left states)
-AB_avg_a = (np.array(AB_a)+np.conjugate(np.array(BA_a)))/2
+#Calculation of symmetrized RIXS_TM
+RIXS_AB_a = RIXS_mom_sym(AB_a,BA_a)
 
 #Creation of the pump grid starting from the pump array
 pump_grid = np.broadcast_to(pump_array,(dim,dim))
 dump_grid = pump_grid.transpose()
 
-#For 2D calculations - temporary
-# AA_a = np.broadcast_to(np.array(AA).reshape((math.isqrt(len(pump_l)),3,3)),(math.isqrt(len(pump_l)),math.isqrt(len(pump_l)),3,3))
-# AB_a = np.array(AB).reshape((len(index_ab)-1,math.isqrt(len(pump_l)),math.isqrt(len(pump_l)),3,3))
-# BA_a = np.array(BA).reshape((len(index_ab)-1,math.isqrt(len(pump_l)),math.isqrt(len(pump_l)),3,3))
-# pump_grid = np.array(pump_l).reshape((math.isqrt(len(pump_l)),math.isqrt(len(pump_l))))
-# dump_grid = np.array(dump_l).reshape((math.isqrt(len(pump_l)),math.isqrt(len(pump_l))))
 
-# RIXS_TM = np.zeros((num_val_states,num_val_states,math.isqrt(len(pump_l)),math.isqrt(len(pump_l)),3,3),dtype=complex) #2D calculation
+#Full RIXS tensor of shape (#val_states+GS,#val_states+GS,omega_p,omega_d,3,3)
 
-#Building the RIXS tensor containing all the RIXS and REXS tensors
-#RIXS_TM.shape = (state_A,state_B,#omega_p,#omega_d,3,3)
+RIXS_TM = np.zeros((block_A_dim,block_A_dim,dim,dim,3,3),dtype='complex64')
 
-#Putting together the full RIXS tensor
-#For 1D calculations
+for index in range(0,block_A_dim,1):
 
-RIXS_TM = np.zeros((num_val_states,num_val_states,dim,dim,3,3),dtype='complex64')
+    if index == 0:
+        RIXS_TM[0,0] = AA_a  #REXS GS->GS
+    else:
+        RIXS_TM[0,index,...] = RIXS_AB_a[index-1,...]
+        RIXS_TM[0,index,...] = np.conjugate(RIXS_AB_a[index-1,...])
 
 #Right and left tensors
 # for index,(row,col) in enumerate(index_ab):
@@ -553,32 +299,45 @@ RIXS_TM = np.zeros((num_val_states,num_val_states,dim,dim,3,3),dtype='complex64'
 #Averaged tensors
 #Only the RIXS excitations from the GS (index=0) to the VE (index>0) are considered.
 
-for index,(row,col) in enumerate(index_ab):
-    
-    if row == col:
-        RIXS_TM[row,col,...] = AA_a
-    else:
-        RIXS_TM[0,index,...] = AB_avg_a[index-1,...]
-        
-        RIXS_TM[index,0,...] = np.conjugate(AB_avg_a[index-1,...])
+print('RIXS read')
 
 ##################
 #PULSE DEFINITION 
 ##################
 
-print('RIXS read')
-
-#Definition of Gaussian functions in the frequency domain
-
 def gauss_freq_1D(omega,omega_carrier,time_shift,alpha,amplitude,pol_v):
+    '''
+    Defines 1D Gaussian pulse envelope in frequency domain.
+
+    Arguments: omega = frequency array
+               omega_carrier = carrier frequency
+               time_shift = time shift (a.u.t.) with respect to time zero.
+               alpha = ((bandwidth*pi)**2)/(2*log(2))
+               amplitude = E_0
+               pol_v = polarization vector
+    Returns: pulse array of shaep (pol_v,omega)
+    '''
+
     shift_factor = np.exp(complex(0,1)*(omega)*time_shift)
     envelope = np.exp(-(((omega-omega_carrier)**2)/(4*alpha)))
-    return(np.einsum('x,f->xf',pol_v,amplitude*shift_factor*envelope))
+    return np.einsum('x,f->xf',pol_v,amplitude*shift_factor*envelope)
 
 def gauss_freq_2D(omega,omega_carrier,time_shift,alpha,amplitude,pol_v):
+    '''
+    Defines 2D Gaussian pulse envelope in frequency domain.
+
+    Arguments: omega = frequency grid
+               omega_carrier = carrier frequency
+               time_shift = time shift (a.u.t.) with respect to time zero.
+               alpha = ((bandwidth*pi)**2)/(2*log(2))
+               amplitude = E_0
+               pol_v = polarization vector
+    Returns: pulse array of shaep (pol_v,omega)
+    '''
+
     shift_factor = np.exp(complex(0,1)*(omega)*time_shift)
     envelope = np.exp(-(((omega-omega_carrier)**2)/(4*alpha)))
-    return(np.einsum('x,pd->xpd',pol_v,amplitude*shift_factor*envelope))
+    return np.einsum('x,pd->xpd',pol_v,amplitude*shift_factor*envelope)
 
 #The pulse is defined as E(\omega)=|E(\omega)|e^{i\phi(\omega)}.
 #E(\omega) and E(\omega)* differ in the sign of the exponential. The phase \phi(\omega) is set to 0 in testing.
@@ -711,6 +470,7 @@ pulse_matrix = np.einsum('xpd,ypd->xypd',pump_freq,np.conjugate(dump_freq)).asty
 #plt.colorbar(spectrum)
 #plt.show()
 
+
 #####################
 #XAS WP COEFFICIENTS
 #####################
@@ -729,12 +489,22 @@ print('Decay rate: %f a.u.'%decay_rate)
 print('Lifetime: %f fs'%lifetime)
 
 def integrand(pulse,frequency,energy,dipole,gamma_m,time):
-    
+    '''
+    Defines the integrand function of first order coefficients integrand
+
+    Arguments: pulse = pulse array definition on frequency domain of shape (3,\omega)
+               dipole = transition dipole moment array of shape (3)
+               time = time array representing the time span to calculate integral.
+               energy = transition energy (with respect to GS) of excited state.
+               frequency = frequency domain of the integral.
+    Returns: integrand of shape (time, frequency)
+    '''
+
     numerator = np.exp(complex(0,1)*(energy-frequency-complex(0,1)*(gamma_m/2))*time)
     denominator = energy-frequency-(complex(0,1)*(gamma_m/2))
 
     #introduced the dot product between the vectorial pulse and the dipole moment
-    return(np.einsum('xf,x,tf->tf',pulse,dipole,numerator/denominator,optimize='optimal'))
+    return np.einsum('xf,x,tf->tf',pulse,dipole,numerator/denominator,optimize='optimal')
 
                        
 def integrand_cc(pulse,frequency,energy,dipole,gamma_m,time_grid):
@@ -742,20 +512,26 @@ def integrand_cc(pulse,frequency,energy,dipole,gamma_m,time_grid):
     numerator = np.exp(-complex(0,1)*(energy-frequency+complex(0,1)*(gamma_m/2))*time)
     denominator = energy-frequency+(complex(0,1)*(gamma_m/2))
     
-    return(pulse*dipole*(numerator))#/denominator))
-
-#Definition of the function for the transition from interaction to Schroedinger picture
-#With 'sign' the transition factor for the bra or ket expansions can be controlled
+    return pulse*dipole*(numerator)#/denominator)
 
 def schroedinger_p(time,energy,gamma_m):
-    return(np.exp(-complex(0,1)*(energy-complex(0,1)*(gamma_m/2))*time))
+    '''
+    Defines array for conversion from interaction to Schroedinger picture.
+
+    Arguments: time = time array over which the wp coefficients are calculated.
+               energy = transition energy of each state (with respect to GS)
+               gamma_m = decay rate of the state.
+    Returns: conversion factors array (num_states, time)
+    '''
+
+    return np.exp(-complex(0,1)*(energy-complex(0,1)*(gamma_m/2))*time)
 #     return(np.exp(-complex(0,1)*energy*time_array))
 
 
 #Initialisation of the arrays of coefficients
 
-c = np.zeros((num_val_states+num_core_states,len(time_array)),dtype=complex)
-c_cc = np.zeros((num_val_states+num_core_states,len(time_array)),dtype=complex)
+c = np.zeros((block_A_dim+block_C_dim,len(time_array)),dtype=complex)
+c_cc = np.zeros((block_A_dim+block_C_dim,len(time_array)),dtype=complex)
 
 c[0,:]+=1
 
@@ -769,18 +545,25 @@ freq_grid,time_grid = np.meshgrid(freq_array,time_array)
 #Integrating over the frequency axis, the coefficients as a function of time are obtained.
 #The t-dependent coefficients for each state are stored in an array of shape (#states,length_time_array)
 
-for state in range(num_val_states,num_val_states+num_core_states):
+for state in range(block_A_dim,block_A_dim+block_C_dim):
     c[state,:] += schroedinger_p(time_array,en_array[0,state],decay_rate)*((1/(math.sqrt(2*np.pi)))*sp.integrate.trapz(integrand(pulse_1P,freq_grid,en_array[0,state],dip_array[0,state],decay_rate,time_grid),dx=step_freq,axis=1))
 
 #######################
 #SRIXS WP COEFFICIENTS
 #######################
 
-
-#Definition of the pre-factor function
-#The function uses the numexpr package for more efficient evaluation of the vectorial functions
-
 def prefactor_red(energy_eq,time,pulse_mom,gamma_k):
+    '''
+    Calculates the exponential pre-factor (coming before pulse and RIXS TM).
+    Utilizes the numexpr package for more efficient evaluation of vectorial functions.
+
+    Arguments: energy_eq = \omega_kg - \omega_p + \omega_d
+               pulse_mom = pulse_matrix * RIXS_TM
+               gamma_k = decay rate valence-excited states (set 0 because of analytical approach)
+               time = time in a.u. at which prefactor is evaluated.
+    Returns: 2D frequency grid over which prefactor function is evaluated.
+    '''
+
     numerator = ne.evaluate('exp((complex(0,1)*energy_eq+(gamma_k/2))*time)')
     denominator = ne.evaluate('energy_eq-complex(0,1)*(gamma_k/2)')
     integrand = ne.evaluate('(numerator/denominator)*pulse_mom')
@@ -791,10 +574,16 @@ def prefactor_red(energy_eq,time,pulse_mom,gamma_k):
 #     denominator = ne.evaluate('energy_eq+complex(0,1)*(gamma_k/2)')
 #     return(ne.evaluate('(numerator/denominator)*pulse_mom'))
 
-
-#Definition of the function to calculate the wp coefficients with the strip method
-
 def wp_calc_opt(time_array, index, low, up, f, f_prime, resonance):
+    '''
+    Calculates the wp coefficients relative to GS and valence-excited states.
+    Utilizes a numerical technique outsied of the strip and an analytical approach within the strip.
+
+    Arguments: time_array = array of time over which to calculate the integral
+               index = GS=0; VE>0
+               low, up, f, f_prime, resonance = information on the strip from compute_strip_stats
+    Returns: WP coefficient as a function of time.
+    '''
     
     time_begin = time_array[0]
     time_step = np.unique(np.diff(time_array))  #np.unique->finds unique elements of array; np.diff->calculates discrete difference between elements
@@ -901,7 +690,7 @@ grid_dim = pump_grid.shape[0]
 print(en_array.shape)
 
 pulse_mom = np.einsum('ijpdxy,xypd->ijpd',RIXS_TM,pulse_matrix,optimize='optimal')
-energy_eq = np.broadcast_to(en_array[0:num_val_states,0:num_val_states,np.newaxis,np.newaxis],pulse_mom.shape)-np.broadcast_to(pump_grid[np.newaxis,np.newaxis,...],pulse_mom.shape)+np.broadcast_to(dump_grid[np.newaxis,np.newaxis,...],pulse_mom.shape)
+energy_eq = np.broadcast_to(en_array[0:block_A_dim,0:block_A_dim,np.newaxis,np.newaxis],pulse_mom.shape)-np.broadcast_to(pump_grid[np.newaxis,np.newaxis,...],pulse_mom.shape)+np.broadcast_to(dump_grid[np.newaxis,np.newaxis,...],pulse_mom.shape)
 
 delta = 2.25e-2
 # delta = 2e-2
@@ -910,6 +699,16 @@ step_size = pump_grid[1][1]-pump_grid[1][0]  #defining the grid step size
 
 # uses global variable: grid_dim, delta, energy_eq, pulse_mom
 def compute_strip_stats(index):
+    '''
+    Calculates quantities needed to the analytical form of the strip integral for GS and each valence-excited state.
+    The strip is defined according to its center and its width (i.e. delta parameter.)
+
+    Arguments: state index (=0: GS, >0: valence-excited)
+    Returns: resonance_strip = grid points corresponding to strip
+             low_null, up_null = grid points corresponding to strip's lower and upper point.
+             f_x0, f_prime_x0 = evaluation of pulse_mom and its first derivative on the strip.
+    '''
+
     #Resonance condition array. Points where the resonance condition is satisfied have value 0.
     resonance = energy_eq[0,index,...].round(3)
     #Coordinates of strip points within a +-delta from the center. shape = (coordinate,#points) => row=0, col=1
@@ -949,7 +748,6 @@ def compute_strip_stats(index):
     #for the non-zero strip, the upper and lower limit are mismatched since the grid curtails the non-zero lower limit.
     #To account for this mismatch between upper and lower limits, the upper limit is calculated by considering the the x+1,y+1 starting coordinate (instead of the x,y+1).
 
-
     if index == 0:
         #Lower limit
         low_null = np.vstack((np.arange(0,row_final_low+1,1),np.arange(col_initial,col_final_up+1,1)))
@@ -980,11 +778,15 @@ num_processes = int(np.round(time_array.size/100))+1
 
 ####
 
-#INTEGRAL COMPUTATION
-#Strip data from compute_stri_stats for each state (corresponding to index)
-#Strip data passed to wp_calc_opt and then parallelisation
-
 def compute_integral(index):
+    '''
+    Computes the double integral. Strip data from compute_stri_stats for each valence-excited state.
+    Strip data passed to wp_calc_opt, calculate the intregral and then parallelisation.
+
+    Arguments: state index (=0: GS, >0: valence-excited)
+    Returns: wp coefficient as a function of time relative to state index.
+    '''
+
     low, up, f, f_prime, resonan_strip = compute_strip_stats(index)
     pulse_mom[0,index,resonan_strip[0],resonan_strip[1]] = 0 #CHECK FOR REDUNDANCY
     result = np.zeros((time_array.size),dtype=np.complex64)
@@ -1008,7 +810,7 @@ def compute_integral(index):
     return result
 
 
-states = range(num_val_states) # 0, 1, 2, num_val_states-1
+states = range(block_A_dim) # 0, 1, 2, num_val_states-1
 timer.tic()
 for index in states:
     res = compute_integral(index)
@@ -1020,7 +822,7 @@ timer.toc(msg='loop time')
 DM = np.einsum('it,jt->ijt',c,np.conjugate(c))
 
 #Saving data in external dictionary
-WP_data = {'Density_Matrix': DM, 'time_array': time_array, 'pulse_time': pulse_time ,'#_val_states': num_val_states, '#_core_states': num_core_states}
+WP_data = {'Density_Matrix': DM, 'time_array': time_array, 'pulse_time': pulse_time ,'#_val_states': block_A_dim, '#_core_states': block_C_dim}
 np.save(outputfilename,WP_data)
 
 print('finished')
