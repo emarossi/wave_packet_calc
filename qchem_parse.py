@@ -76,7 +76,9 @@ def output_parse(file):
     Returns: dictionary 'file_content' with the state and transition properties
     '''
 
-    file_content = {'state': {'state_labels' : [], 
+    file_content = {'calc_data' :{'C' : [],
+                                  'mat_dim': 0},
+                    'state': {'state_labels' : [], 
                               'state_dm' : [],
                               'num_val_states': 0,
                               'num_core_states': 0},
@@ -141,6 +143,7 @@ def output_parse(file):
 
                 #Getting basis set dimension -> matrices dimension
                 mat_dim = int(line.split(' ')[6].strip())
+                file_content['calc_data']['mat_dim'] = mat_dim
 
             '''
             MO coefficients matrix
@@ -169,6 +172,7 @@ def output_parse(file):
 
                 if 'Final Alpha Density Matrix' in line:
                     C = np.linalg.inv(np.concatenate(MO_list,axis=1).transpose())
+                    file_content['calc_data']['C'] = C
                     MO_mat_out = False
             
             '''

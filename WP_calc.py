@@ -167,6 +167,27 @@ qchem_out_data = qchem_parse.output_parse(file)
 block_A_dim = qchem_out_data['state']['num_val_states']+1  #adding 1 for the ground state
 block_C_dim = qchem_out_data['state']['num_core_states']
 
+################
+#SYMMETRIZE DMs
+################
+
+def dm_symm(dm_AB,dm_BA):
+    '''
+    Symmetrizes EOM-CC TDMs: dm = (sqrt(dm_AB*dm_BA)*sign(dm_AB))
+
+    Arguments: real-valued dm_A->B, dm_B->A; shape = (#basis_el, #basis_el)
+    Returns: symmetrized real-valued dm_AB; shape = (#basis_el, #basis_el)
+    '''
+    dm_phase = np.sign(dm_AB)
+    dm_mod = np.sqrt(np.abs(np.multiply(np.array(dm_AB), np.array(dm_BA).transpose(0,2,1)))) #need abs for imprecise numerics from Qchem
+    return np.multiply(dm_phase,dm_mod)
+
+DM_tdm = np.zeros((block_A_dim+block_C_dim,block_A_dim+block_C_dim,qchem_out_data['calc_data']['mat_dim'],qchem_out_data['calc_data']['mat_dim']))
+
+DM_tdm[np.diag_indices(block_A_dim+block_C_dim,ndim=2)] = np.array(qchem_out_data['state']['state_dm'])
+
+
+
 ###########################################################
 #1-PHOTON - ASSEMBLING TRANSITION ENERGY AND DIPOLE ARRAYS
 ###########################################################
@@ -779,44 +800,44 @@ num_processes = int(np.round(time_array.size/100))+1
 
 ####
 
-def compute_integral(index):
-    '''
-    Computes the double integral. Strip data from compute_stri_stats for each valence-excited state.
-    Strip data passed to wp_calc_opt, calculate the intregral and then parallelisation.
+# def compute_integral(index):
+#     '''
+#     Computes the double integral. Strip data from compute_stri_stats for each valence-excited state.
+#     Strip data passed to wp_calc_opt, calculate the intregral and then parallelisation.
 
-    Arguments: state index (=0: GS, >0: valence-excited)
-    Returns: wp coefficient as a function of time relative to state index.
-    '''
+#     Arguments: state index (=0: GS, >0: valence-excited)
+#     Returns: wp coefficient as a function of time relative to state index.
+#     '''
 
-    low, up, f, f_prime, resonan_strip = compute_strip_stats(index)
-    pulse_mom[0,index,resonan_strip[0],resonan_strip[1]] = 0 #CHECK FOR REDUNDANCY
-    result = np.zeros((time_array.size),dtype=np.complex64)
-    time_grids = np.array_split(time_array,num_processes)
-    with mp.Pool(num_processes) as p:
-        result_ = p.starmap(wp_calc_opt, 
-                               zip(
-                                   time_grids, 
-                                   itertools.repeat(index),
-                                   itertools.repeat(low), 
-                                   itertools.repeat(up),
-                                   itertools.repeat(f), 
-                                   itertools.repeat(f_prime),
-                                   itertools.repeat(resonan_strip)
-                                   ))
-        begin_ = 0
-        for res in result_:
-            end_ = begin_+len(res)
-            result[begin_:end_] = np.array(res)
-            begin_ = end_
-    return result
+#     low, up, f, f_prime, resonan_strip = compute_strip_stats(index)
+#     pulse_mom[0,index,resonan_strip[0],resonan_strip[1]] = 0 #CHECK FOR REDUNDANCY
+#     result = np.zeros((time_array.size),dtype=np.complex64)
+#     time_grids = np.array_split(time_array,num_processes)
+#     with mp.Pool(num_processes) as p:
+#         result_ = p.starmap(wp_calc_opt, 
+#                                zip(
+#                                    time_grids, 
+#                                    itertools.repeat(index),
+#                                    itertools.repeat(low), 
+#                                    itertools.repeat(up),
+#                                    itertools.repeat(f), 
+#                                    itertools.repeat(f_prime),
+#                                    itertools.repeat(resonan_strip)
+#                                    ))
+#         begin_ = 0
+#         for res in result_:
+#             end_ = begin_+len(res)
+#             result[begin_:end_] = np.array(res)
+#             begin_ = end_
+#     return result
 
 
-states = range(block_A_dim) # 0, 1, 2, num_val_states-1
-timer.tic()
-for index in states:
-    res = compute_integral(index)
-    c[index,:] += np.asarray(res).reshape(len(time_array))*np.exp(-complex(0,1)*en_array[0,index]*time_array) 
-timer.toc(msg='loop time')
+# states = range(block_A_dim) # 0, 1, 2, num_val_states-1
+# timer.tic()
+# for index in states:
+#     res = compute_integral(index)
+#     c[index,:] += np.asarray(res).reshape(len(time_array))*np.exp(-complex(0,1)*en_array[0,index]*time_array) 
+# timer.toc(msg='loop time')
 
 #Calculating density matrix
 
