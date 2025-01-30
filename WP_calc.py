@@ -198,7 +198,7 @@ opDM[block_A_dim:,0] = opDM[0,block_A_dim:].transpose(0,2,1)
 
 #Block C 1PDM: CE<->CE
 opDM[np.triu_indices(block_C_dim, k=1)[0]+block_A_dim,np.triu_indices(block_C_dim, k=1)[1]+block_A_dim] = dm_symm(qchem_out_data['transition']['block_C']['AB_tdm'],qchem_out_data['transition']['block_C']['BA_tdm'])
-opDM[block_A_dim:,block_A_dim:] += opDM[block_A_dim:,block_A_dim:].transpose(1,0,3,2)
+opDM[np.triu_indices(block_C_dim, k=1)[1]+block_A_dim,np.triu_indices(block_C_dim, k=1)[0]+block_A_dim] = opDM[np.triu_indices(block_C_dim, k=1)[0]+block_A_dim,np.triu_indices(block_C_dim, k=1)[1]+block_A_dim].transpose(0,2,1)
 
 ###########################################################
 #1-PHOTON - ASSEMBLING TRANSITION ENERGY AND DIPOLE ARRAYS
@@ -579,7 +579,7 @@ freq_grid,time_grid = np.meshgrid(freq_array,time_array)
 #The t-dependent coefficients for each state are stored in an array of shape (#states,length_time_array)
 
 for state in range(block_A_dim,block_A_dim+block_C_dim):
-    c[state,:] += schroedinger_p(time_array,en_array[0,state],decay_rate)*((1/(math.sqrt(2*np.pi)))*sp.integrate.trapz(integrand(pulse_1P,freq_grid,en_array[0,state],dip_array[0,state],decay_rate,time_grid),dx=step_freq,axis=1))
+    c[state,:] += schroedinger_p(time_array,en_array[0,state],decay_rate)*((1/(math.sqrt(2*np.pi)))*sp.integrate.trapezoid(integrand(pulse_1P,freq_grid,en_array[0,state],dip_array[0,state],decay_rate,time_grid),dx=step_freq,axis=1))
 
 #######################
 #SRIXS WP COEFFICIENTS
@@ -653,8 +653,8 @@ def wp_calc_opt(time_array, index, low, up, f, f_prime, resonance):
         if index == 0: #REXS
             integrand_full[resonance[0],resonance[1]] = 0   #integrand=0 on the strip (row, col strip coords array)
         
-        correction = (-np.sum(((sp.integrate.trapz(integrand_full[low[0],low[1]]*step_size/2, dx=step_size)*step_size)/2)
-            +((sp.integrate.trapz(integrand_full[up[0],up[1]]*step_size/2, dx=step_size)*step_size)/2))
+        correction = (-np.sum(((sp.integrate.trapezoid(integrand_full[low[0],low[1]]*step_size/2, dx=step_size)*step_size)/2)
+            +((sp.integrate.trapezoid(integrand_full[up[0],up[1]]*step_size/2, dx=step_size)*step_size)/2))
             +f_prime*2*(math.sin(delta*time)/time)+complex(0,1)*(2*sp.special.sici(delta*time)[0]+np.pi)*f)
     
         integral_0 = step_size*step_size*np.sum(integrand_full)   #0th order integration to save computational time
@@ -703,8 +703,8 @@ def wp_calc_opt(time_array, index, low, up, f, f_prime, resonance):
 #        
 #        integrand_full = cp.asnumpy(gpu_integrand_full)
 #        
-#        correction.append(-np.sum(((sp.integrate.trapz(integrand_full[low_nonull[0],low_nonull[1]]*step_size/2, dx=step_size)*step_size)/2)
-#                                  +((sp.integrate.trapz(integrand_full[up_nonull[0],up_nonull[1]]*step_size/2, dx=step_size)*step_size)/2))
+#        correction.append(-np.sum(((sp.integrate.trapezoid(integrand_full[low_nonull[0],low_nonull[1]]*step_size/2, dx=step_size)*step_size)/2)
+#                                  +((sp.integrate.trapezoid(integrand_full[up_nonull[0],up_nonull[1]]*step_size/2, dx=step_size)*step_size)/2))
 #                                  +f_prime_x0*(math.sin(delta*time)/(delta*time))+complex(0,1)*(2*sp.special.sici(delta*time)[0]+np.pi)*f_x0)       
 #    
 #        
@@ -799,11 +799,11 @@ def compute_strip_stats(index):
     
     #CALCULATION OF QUANTITIES RELATED TO THE PULSE-MOMENTUM PRODUCT. 
     #In the solution of the integral, it is necessary to integrate along the resonance line to find f(x0) and to consider the incremental ratio calculated based on the pulse-momentum product function.
-    f_x0 = sp.integrate.trapz(pulse_mom[0,index,resonance_center[0],resonance_center[1]],dx=step_size)
-    # f_x0_cc = sp.integrate.trapz(pulse_mom[index,0,resonance_center[0],resonance_center[1]],dx=step_size)
+    f_x0 = sp.integrate.trapezoid(pulse_mom[0,index,resonance_center[0],resonance_center[1]],dx=step_size)
+    # f_x0_cc = sp.integrate.trapezoid(pulse_mom[index,0,resonance_center[0],resonance_center[1]],dx=step_size)
     f_prime_x0_integrand = pulse_mom[0,index,up_nonull[0],up_nonull[1]]-pulse_mom[0,index,low_nonull[0],low_nonull[1]]
     # f_prime_x0_integrand_cc = pulse_mom[index,0,up_nonull[0],up_nonull[1]]-pulse_mom[index,0,low_nonull[0],low_nonull[1]]
-    f_prime_x0 = sp.integrate.trapz(f_prime_x0_integrand,dx=step_size)
+    f_prime_x0 = sp.integrate.trapezoid(f_prime_x0_integrand,dx=step_size)
     
     return low_null, up_null, f_x0, f_prime_x0, resonance_strip
 
