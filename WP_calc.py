@@ -167,6 +167,39 @@ qchem_out_data = qchem_parse.output_parse(file)
 block_A_dim = qchem_out_data['state']['num_val_states']+1  #adding 1 for the ground state
 block_C_dim = qchem_out_data['state']['num_core_states']
 
+################
+#SYMMETRIZE DMs
+################
+
+def dm_symm(dm_AB,dm_BA):
+    '''
+    Symmetrizes EOM-CC TDMs: dm = (sqrt(dm_AB*dm_BA)*sign(dm_AB))
+
+    Arguments: real-valued dm_A->B, dm_B->A; shape = (#basis_el, #basis_el)
+    Returns: symmetrized real-valued dm_AB; shape = (#basis_el, #basis_el)
+    '''
+    dm_phase = np.sign(dm_AB)
+    dm_mod = np.sqrt(np.abs(np.multiply(np.array(dm_AB), np.array(dm_BA).transpose(0,2,1)))) #need abs for imprecise numerics from Qchem
+    return np.multiply(dm_phase,dm_mod)
+
+#Initialize 1PDM tensor
+opDM = np.zeros((block_A_dim+block_C_dim,block_A_dim+block_C_dim,qchem_out_data['calc_data']['mat_dim'],qchem_out_data['calc_data']['mat_dim']))
+
+#State 1PDM on the diagonal
+opDM[np.diag_indices(block_A_dim+block_C_dim,ndim=2)] = np.array(qchem_out_data['state']['state_dm'])
+
+#Block A 1PDM: GS<->VE
+opDM[0,1:block_A_dim] = dm_symm(qchem_out_data['transition']['block_A']['AB_tdm'],qchem_out_data['transition']['block_A']['BA_tdm'])
+opDM[1:block_A_dim,0] = opDM[0,1:block_A_dim].transpose(0,2,1)
+
+#Block B 1PDM: GS<->CE
+opDM[0,block_A_dim:] = dm_symm(qchem_out_data['transition']['block_B']['AB_tdm'],qchem_out_data['transition']['block_B']['BA_tdm'])
+opDM[block_A_dim:,0] = opDM[0,block_A_dim:].transpose(0,2,1)
+
+#Block C 1PDM: CE<->CE
+opDM[np.triu_indices(block_C_dim, k=1)[0]+block_A_dim,np.triu_indices(block_C_dim, k=1)[1]+block_A_dim] = dm_symm(qchem_out_data['transition']['block_C']['AB_tdm'],qchem_out_data['transition']['block_C']['BA_tdm'])
+opDM[block_A_dim:,block_A_dim:] += opDM[block_A_dim:,block_A_dim:].transpose(1,0,3,2)
+
 ###########################################################
 #1-PHOTON - ASSEMBLING TRANSITION ENERGY AND DIPOLE ARRAYS
 ###########################################################
@@ -823,7 +856,7 @@ timer.toc(msg='loop time')
 DM = np.einsum('it,jt->ijt',c,np.conjugate(c))
 
 #Saving data in external dictionary
-WP_data = {'Density_Matrix': DM, 'time_array': time_array, 'pulse_time': pulse_time ,'#_val_states': block_A_dim, '#_core_states': block_C_dim}
+WP_data = {'Density_Matrix': DM, '1PDM': opDM, 'time_array': time_array, 'pulse_time': pulse_time , '#_val_states': block_A_dim, '#_core_states': block_C_dim}
 np.save(outputfilename,WP_data)
 
 print('finished')
