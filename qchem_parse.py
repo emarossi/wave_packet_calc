@@ -113,8 +113,9 @@ def output_parse(file):
     DM_out = False
 
     #AO<->MO transformation matrix - checkpoint and storing variables
-    MO_mat_out = False
-    MO_list_sub = []
+    MO_C_out = False
+    MO_num_out = 0
+    # MO_list_sub = []
     MO_list = []
 
     #1-photon: block checkpoint variables
@@ -135,12 +136,11 @@ def output_parse(file):
     RIXS_TM_AB = []
     RIXS_TM_BA = []
 
-    #MO matrix variables
-    MO_C_out = False
-    MO_num_out = 0
-
     with open(file+'.in.fchk') as f:
-        #Getting MO matrix from checkpoint file
+        '''
+        MO coefficient matrix from checkpoint file
+        Each line is appended to MO_list. MO_list is reshaped into array when mat_dim is available.
+        '''
         for count,line in enumerate(f):
 
             if 'Alpha MO coefficients' in line:
@@ -173,45 +173,45 @@ def output_parse(file):
                 mat_dim = int(line.split(' ')[6].strip())
                 file_content['calc_data']['mat_dim'] = mat_dim
 
-                #Reshaping MO matrix
+                #MO coeff. matrix C. MO_list->array->reshape into a square matrix of dim=mat_dim
                 C = np.linalg.inv(np.array(MO_list,dtype=float).reshape((mat_dim,mat_dim)))
                 file_content['calc_data']['C'] = C
 
-            '''
-            MO coefficients matrix
-            Matrix printed in blocks of shape (mat_dim,a), with a<=6.
-            Printout rows: line_count = 1 and line_count = mat_dim; cols: 1-a<=6
-            Elements of each block appended to MO_list_sub. Turned to numpy array and appended to MO_list.
-            Blocks in MO_list concatenated to give C matrix.
-            '''
+            # '''
+            # MO coefficients matrix from output file -> PROBLEM!!: doesn't give correct symmetry as that from .fchk
+            # Matrix printed in blocks of shape (mat_dim,a), with a<=6.
+            # Printout rows: line_count = 1 and line_count = mat_dim; cols: 1-a<=6
+            # Elements of each block appended to MO_list_sub. Turned to numpy array and appended to MO_list.
+            # Blocks in MO_list concatenated to give C matrix.
+            # '''
 
             # if 'Final Alpha MO Coefficients' in line:
-            #     MO_mat_out = True
+            #     MO_C_out = True
             #     line_count = -1
 
-            # if MO_mat_out == True:
+            # if MO_C_out == True:
 
             #     if line_count > 0 and line_count <= mat_dim:
             #         list_el = list(map(lambda y: float(y),(map(lambda x: x.strip(),list(filter(None,line.split(' ')))[1:]))))
             #         MO_list_sub+=list_el
 
             #     if line_count == mat_dim:
-            #         MO_list.append(np.array(MO_list_sub).reshape((mat_dim,len(MO_list_sub)//mat_dim)))
+            #         MO_list.append(np.reshape(np.array(MO_list_sub),shape=(mat_dim,len(MO_list_sub)//mat_dim),order='C'))
             #         MO_list_sub = []
             #         line_count = -1
                 
             #     line_count += 1
 
             #     if 'Final Alpha Density Matrix' in line:
-            #         C = np.linalg.inv(np.concatenate(MO_list,axis=1).transpose())
+            #         # C = np.linalg.inv(np.column_stack(MO_list).transpose())
+            #         C = np.column_stack(MO_list)
             #         file_content['calc_data']['C'] = C
-            #         MO_mat_out = False
+            #         MO_C_out = False
             
             '''
             Saving number of states and labels
             label_list order: GS, VE, CE
             '''
-
             if 'Reference state properties' in line:
                 file_content['state']['state_labels'] = ['GS']
                 label_list = ['GS']
