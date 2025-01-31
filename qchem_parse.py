@@ -135,7 +135,35 @@ def output_parse(file):
     RIXS_TM_AB = []
     RIXS_TM_BA = []
 
-    with open(file,'r') as f: 
+    #MO matrix variables
+    MO_C_out = False
+    MO_num_out = 0
+
+    with open(file+'.in.fchk') as f:
+        #Getting MO matrix from checkpoint file
+        for count,line in enumerate(f):
+
+            if 'Alpha MO coefficients' in line:
+                MO_C_out = True
+                MO_num_out += 1
+                header_line_MO_C = count
+
+                if int(line.split('=')[1].strip()) % 5 > 0:
+                    num_lines = int(line.split('=')[1].strip()) // 5 + 1
+                else:
+                    num_lines = int(line.split('=')[1].strip()) // 5
+
+            if MO_C_out == True and MO_num_out == 1:
+                
+                if count > header_line_MO_C and count < (header_line_MO_C+num_lines):
+                    MO_list += list(i.strip() for i in filter(None,line.split(' ')))
+                    
+                elif count == (header_line_MO_C+num_lines):
+                    MO_list += list(i.strip() for i in filter(None,line.split(' ')))
+                    MO_C_out = False
+
+
+    with open(file+'.out','r') as f: 
 
         for count, line in enumerate(f):
 
@@ -145,6 +173,10 @@ def output_parse(file):
                 mat_dim = int(line.split(' ')[6].strip())
                 file_content['calc_data']['mat_dim'] = mat_dim
 
+                #Reshaping MO matrix
+                C = np.linalg.inv(np.array(MO_list,dtype=float).reshape((mat_dim,mat_dim)))
+                file_content['calc_data']['C'] = C
+
             '''
             MO coefficients matrix
             Matrix printed in blocks of shape (mat_dim,a), with a<=6.
@@ -153,27 +185,27 @@ def output_parse(file):
             Blocks in MO_list concatenated to give C matrix.
             '''
 
-            if 'Final Alpha MO Coefficients' in line:
-                MO_mat_out = True
-                line_count = -1
+            # if 'Final Alpha MO Coefficients' in line:
+            #     MO_mat_out = True
+            #     line_count = -1
 
-            if MO_mat_out == True:
+            # if MO_mat_out == True:
 
-                if line_count > 0 and line_count <= mat_dim:
-                    list_el = list(map(lambda y: float(y),(map(lambda x: x.strip(),list(filter(None,line.split(' ')))[1:]))))
-                    MO_list_sub+=list_el
+            #     if line_count > 0 and line_count <= mat_dim:
+            #         list_el = list(map(lambda y: float(y),(map(lambda x: x.strip(),list(filter(None,line.split(' ')))[1:]))))
+            #         MO_list_sub+=list_el
 
-                if line_count == mat_dim:
-                    MO_list.append(np.array(MO_list_sub).reshape((mat_dim,len(MO_list_sub)//mat_dim)))
-                    MO_list_sub = []
-                    line_count = -1
+            #     if line_count == mat_dim:
+            #         MO_list.append(np.array(MO_list_sub).reshape((mat_dim,len(MO_list_sub)//mat_dim)))
+            #         MO_list_sub = []
+            #         line_count = -1
                 
-                line_count += 1
+            #     line_count += 1
 
-                if 'Final Alpha Density Matrix' in line:
-                    C = np.linalg.inv(np.concatenate(MO_list,axis=1).transpose())
-                    file_content['calc_data']['C'] = C
-                    MO_mat_out = False
+            #     if 'Final Alpha Density Matrix' in line:
+            #         C = np.linalg.inv(np.concatenate(MO_list,axis=1).transpose())
+            #         file_content['calc_data']['C'] = C
+            #         MO_mat_out = False
             
             '''
             Saving number of states and labels
@@ -428,6 +460,7 @@ def output_parse(file):
                     tensor_temp += RIXS_TM_mod(line,True)
                 else:
                     tensor_temp += RIXS_TM_mod(line)
+
 
     #Reshaping RIXS TM's to (num_val_states,omega_p,3,3) and REXS TMs to (omega_p,3,3)
 
