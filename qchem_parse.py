@@ -174,7 +174,8 @@ def output_parse(file):
                 file_content['calc_data']['mat_dim'] = mat_dim
 
                 #MO coeff. matrix C. MO_list->array->reshape into a square matrix of dim=mat_dim
-                C = np.linalg.inv(np.array(MO_list,dtype=float).reshape((mat_dim,mat_dim)))
+                # C = np.linalg.inv(np.array(MO_list,dtype=float).reshape((mat_dim,mat_dim)))
+                C = np.linalg.inv(np.array(MO_list,dtype=float).reshape((mat_dim,mat_dim)).transpose())
                 file_content['calc_data']['C'] = C
 
             # '''
