@@ -179,7 +179,7 @@ def dm_symm(dm_AB,dm_BA):
     Returns: symmetrized real-valued dm_AB; shape = (#basis_el, #basis_el)
     '''
     dm_phase = np.sign(dm_AB)
-    dm_mod = np.sqrt(np.abs(np.multiply(np.array(dm_AB), np.array(dm_BA).transpose(0,2,1)))) #need abs for imprecise numerics from Qchem
+    dm_mod = np.sqrt(np.abs(np.multiply(np.array(dm_AB), np.array(dm_BA).transpose(0,2,1)))) #need abs for imprecise numerics from Qchem which lead to negative arguments for root
     return np.multiply(dm_phase,dm_mod)
 
 #Initialize 1PDM tensor
@@ -212,7 +212,7 @@ def dip_mom_sym(dip_AB,dip_BA):
     Returns: symmetrized dipole array; shape=(#A<->B transitions,3)
     '''
     dip_phase = np.sign(dip_AB)
-    dip_mod = np.sqrt(np.multiply(dip_AB,dip_BA))
+    dip_mod = np.sqrt(np.multiply(np.abs(dip_AB),np.abs(dip_BA))) #abs shouldn't be needed because dipoles should have same sign. Qchem output sometimes with different sign (probably due to too small basis).
     return np.multiply(dip_mod,dip_phase)
 
 #BLOCK A - energy array definition: shape=(GS+#valence_excited,GS+#valence_excited)
