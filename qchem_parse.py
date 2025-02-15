@@ -86,8 +86,7 @@ def output_parse(file):
     Returns: dictionary 'file_content' with the state and transition properties
     '''
 
-    file_content = {'calc_data' :{'C' : [],
-                                  'mat_dim': 0},
+    file_content = {'calc_data' :{'mat_dim': 0},
                     'state': {'state_labels' : [], 
                               'state_dm' : [],
                               'num_val_states': 0,
