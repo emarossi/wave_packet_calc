@@ -8,11 +8,10 @@ The script aims at reading the calculation data and export it as a dictionary.
 '''
 
 __author__ = 'Emanuele Rossi'
-__version__ = '2.0'
-__version_date__ = 'January 2025'
+__version__ = '2.1'
+__version_date__ = 'February 2025'
 
-
-def ao_to_mo(C,DM_ao):
+def ao_to_mo(DM_ao,C):
     '''
     Converts the DM from ao basis to mo basis.
 
@@ -20,7 +19,18 @@ def ao_to_mo(C,DM_ao):
     Performs: C^T*DM_ao*C = DM_mo -> (mo,ao)(ao,ao)(ao,mo) = (mo,mo)
     Returns: DM_mo (mo,mo)
     '''
-    return np.einsum('jp,jk,kq->pq',C,DM_ao,C)
+    return np.einsum('pj,ijk,qk->ipq',np.linalg.inv(C), np.array(DM_ao, dtype=float), np.linalg.inv(C))
+
+def triang_to_full(tri_mat,mat_dim):
+    '''
+    Converts (upper) triangular state DM printout into full matrix
+    
+    Arguments: triangular matrix elements (tri_mat), matrix dimension (mat_dim)
+    Returns: square state DM matrix
+    '''
+    tri = np.zeros((mat_dim, mat_dim))
+    tri[np.tril_indices(mat_dim, 0)] = tri_mat
+    return tri+np.triu(np.transpose(tri),1)
 
 
 def string_to_complex(string):
@@ -108,40 +118,52 @@ def output_parse(file):
                                                'AB_tdm': [],
                                                'BA_tdm': []}}}
 
-
-    #State density matrices output checkpoints
-    DM_out = False
-
-    #AO<->MO transformation matrix - checkpoint and storing variables
-    MO_C_out = False
-    MO_num_out = 0
-    # MO_list_sub = []
-    MO_list = []
-
-    #1-photon: block checkpoint variables
-    block_A = False
+    #Output file - 1-photon: block checkpoint variables
+    state_out = False
     block_B = False
     block_C = False
-    block_AB = False
 
-    #Transition density matrices output checkpoint
-    AB_mat_out = False
-    BA_mat_out = False
-
-    #2-photon: RIXS and REXS output checkpoint variables
+    #Output file - 2-photon: RIXS and REXS output checkpoint variables
     RIXS_out = False   #Output of RIXS tensor (relative to a couple of frequency points)
     REXS_out = False   #Output of REXS tensor (relative to an omega_p point)
 
-    #2-photon: RIXS TM A->B, B->A lists initialisation
+    #output file - 2-photon: RIXS TM A->B, B->A lists initialisation
     RIXS_TM_AB = []
     RIXS_TM_BA = []
+    
+    #fchk file - AO<->MO transformation matrix, checkpoint and storing variables
+    MO_C_out = False
+    MO_num_out = 0
+    MO_list = []
 
-    with open(file+'.in.fchk') as f:
+    #fchk file - Initialize B, C blocks + A->B, B->A outputs
+    AB_out = False
+    BA_out = False
+    B_out = False
+    C_out = False
+
+    #fchk file - Initialize CE and VE state lists
+    CE_state_list = []
+    VE_state_list = []
+
+    #fchk file - Initialize A->B, B->A output lists for each block
+    A_AB_list = []
+    A_BA_list = []
+    B_AB_list = []
+    B_BA_list = []
+    C_AB_list = []
+    C_BA_list = []
+
+    with open(file+'-SRIXS.in.fchk') as f:
         '''
-        MO coefficient matrix from checkpoint file
+        MO coefficient, state and transition DMs from checkpoint file - block A
         Each line is appended to MO_list. MO_list is reshaped into array when mat_dim is available.
         '''
         for count,line in enumerate(f):
+
+            if 'Number of basis functions' in line:
+                num_MO = int(line.split('I')[1].strip())
+                file_content['calc_data']['mat_dim'] = num_MO
 
             if 'Alpha MO coefficients' in line:
                 MO_C_out = True
@@ -160,255 +182,212 @@ def output_parse(file):
                     
                 elif count == (header_line_MO_C+num_lines):
                     MO_list += list(i.strip() for i in filter(None,line.split(' ')))
+                    MO_C = np.array(MO_list, dtype=float).reshape((num_MO,num_MO), order='F')
                     MO_C_out = False
 
-
-    with open(file+'.out','r') as f: 
-
-        for count, line in enumerate(f):
-
-            if 'basis functions' in line:
-
-                #Getting basis set dimension -> matrices dimension
-                mat_dim = int(line.split(' ')[6].strip())
-                file_content['calc_data']['mat_dim'] = mat_dim
-
-                #MO coeff. matrix C. MO_list->array->reshape into a square matrix of dim=mat_dim
-                # C = np.linalg.inv(np.array(MO_list,dtype=float).reshape((mat_dim,mat_dim)))
-                C = np.linalg.inv(np.array(MO_list,dtype=float).reshape((mat_dim,mat_dim)))
-                file_content['calc_data']['C'] = C
-
-            # '''
-            # MO coefficients matrix from output file -> PROBLEM!!: doesn't give correct symmetry as that from .fchk
-            # Matrix printed in blocks of shape (mat_dim,a), with a<=6.
-            # Printout rows: line_count = 1 and line_count = mat_dim; cols: 1-a<=6
-            # Elements of each block appended to MO_list_sub. Turned to numpy array and appended to MO_list.
-            # Blocks in MO_list concatenated to give C matrix.
-            # '''
-
-            # if 'Final Alpha MO Coefficients' in line:
-            #     MO_C_out = True
-            #     line_count = -1
-
-            # if MO_C_out == True:
-
-            #     if line_count > 0 and line_count <= mat_dim:
-            #         list_el = list(map(lambda y: float(y),(map(lambda x: x.strip(),list(filter(None,line.split(' ')))[1:]))))
-            #         MO_list_sub+=list_el
-
-            #     if line_count == mat_dim:
-            #         MO_list.append(np.reshape(np.array(MO_list_sub),shape=(mat_dim,len(MO_list_sub)//mat_dim),order='C'))
-            #         MO_list_sub = []
-            #         line_count = -1
-                
-            #     line_count += 1
-
-            #     if 'Final Alpha Density Matrix' in line:
-            #         # C = np.linalg.inv(np.column_stack(MO_list).transpose())
-            #         C = np.column_stack(MO_list)
-            #         file_content['calc_data']['C'] = C
-            #         MO_C_out = False
+            if 'CC State Density' in line or 'State Density' in line:
+                state_out = True
+                header_line = count
+                state_list = []
             
+                #Getting the number of lines of DM's printout's number of lines - based on number of elements and elements per line data
+                if int(line.split('=')[1].strip()) % 5 > 0:
+                    num_lines = int(line.split('=')[1].strip()) // 5 + 1
+                else:
+                    num_lines = int(line.split('=')[1].strip()) // 5
+
+            if state_out == True: 
+                
+                if count > header_line and count < (header_line+num_lines):
+                    state_list += list(i.strip() for i in filter(None,line.split(' ')))
+                    
+                elif count == (header_line+num_lines):
+                    state_list += list(i.strip() for i in filter(None,line.split(' ')))
+                    VE_state_list.append(triang_to_full(np.array(state_list,dtype=float),num_MO))
+                    state_out = False
+
+            if 'Transition DM' in line:
+                header_line_A = count
+                tdm_list = []
+                
+                if int(line.split('=')[1].strip()) % 5 > 0:
+                    num_lines = int(line.split('N=')[1].strip()) // 5 + 1
+                else:
+                    num_lines = int(line.split('N=')[1].strip()) // 5
+                
+                if 'A->B:' in line:
+                    AB_out = True
+                    BA_out = False
+
+                if 'B->A:' in line:
+                    BA_out = True
+                    AB_out = False
+
+            if AB_out == True or BA_out == True:
+
+                if count > header_line_A and count < (header_line_A+num_lines):
+                    tdm_list += list(i.strip() for i in filter(None,line.split(' ')))
+                    
+                elif count == (header_line_A+num_lines) and AB_out == True:
+                    tdm_list += list(i.strip() for i in filter(None,line.split(' ')))
+                    A_AB_list.append(np.array(tdm_list, dtype=float).reshape((num_MO,num_MO), order='F'))
+                    AB_out = False
+                
+                elif count == (header_line_A+num_lines) and BA_out == True:
+                    tdm_list += list(i.strip() for i in filter(None,line.split(' ')))
+                    A_BA_list.append(np.array(tdm_list, dtype=float).reshape((num_MO,num_MO), order='F'))
+                    BA_out = False
+
+    file_content['state']['state_dm'] = ao_to_mo(VE_state_list,MO_C)
+    file_content['transition']['block_A']['AB_tdm'] = ao_to_mo(A_AB_list,MO_C)
+    file_content['transition']['block_A']['BA_tdm'] = ao_to_mo(A_BA_list,MO_C)
+
+    with open(file+'-XAS.in.fchk') as f:
+        '''
+        MO coefficient, state and transition DMs from checkpoint file - blocks B, C
+        Each line is appended to MO_list. MO_list is reshaped into array when mat_dim is available.
+        '''
+        for count,line in enumerate(f):
+
+            if 'Number of basis functions' in line:
+                num_MO = int(line.split('I')[1].strip())
+
+            if 'Alpha MO coefficients' in line:
+                MO_C_out = True
+                MO_num_out += 1
+                header_line_MO_C = count
+
+                if int(line.split('=')[1].strip()) % 5 > 0:
+                    num_lines = int(line.split('=')[1].strip()) // 5 + 1
+                else:
+                    num_lines = int(line.split('=')[1].strip()) // 5
+
+            if MO_C_out == True and MO_num_out == 1:
+                
+                if count > header_line_MO_C and count < (header_line_MO_C+num_lines):
+                    MO_list += list(i.strip() for i in filter(None,line.split(' ')))
+                    
+                elif count == (header_line_MO_C+num_lines):
+                    MO_list += list(i.strip() for i in filter(None,line.split(' ')))
+                    MO_C = np.array(MO_list, dtype=float).reshape((num_MO,num_MO), order='F')
+                    MO_C_out = False
+
+            if 'State Density' in line:
+                state_out = True
+                header_line = count
+                state_list = []
+            
+                if int(line.split('=')[1].strip()) % 5 > 0:
+                    num_lines = int(line.split('=')[1].strip()) // 5 + 1
+                else:
+                    num_lines = int(line.split('=')[1].strip()) // 5
+
+            if state_out == True: 
+                
+                if count > header_line and count < (header_line+num_lines):
+                    state_list += list(i.strip() for i in filter(None,line.split(' ')))
+                    
+                elif count == (header_line+num_lines):
+                    state_list += list(i.strip() for i in filter(None,line.split(' ')))
+                    CE_state_list.append(triang_to_full(np.array(state_list,dtype=float),num_MO))
+                    state_out = False
+
+            if 'Transition DM' in line:
+                
+                if int(line.split('=')[1].strip()) % 5 > 0:
+                    num_lines = int(line.split('N=')[1].strip()) // 5 + 1
+                else:
+                    num_lines = int(line.split('N=')[1].strip()) // 5
+                
+                if 'cvs' in line.split('<-->')[0]:
+                    C_out = True
+                    header_line_C = count
+                    tdm_list = []
+                    
+                elif ':ccsd' in line.split('<-->')[0] and 'cvs' in line.split('<-->')[1]:
+                    B_out = True
+                    header_line_B = count
+                    tdm_list = []
+
+                if 'A->B:' in line:
+                    AB_out = True
+                    BA_out = False
+
+                if 'B->A:' in line:
+                    BA_out = True
+                    AB_out = False
+            
+            if B_out == True:
+            
+                if count > header_line_B and count < (header_line_B+num_lines):
+                    tdm_list += list(i.strip() for i in filter(None,line.split(' ')))
+
+                if count == (header_line_B+num_lines) and AB_out == True:
+                    tdm_list += list(i.strip() for i in filter(None,line.split(' ')))
+                    B_AB_list.append(np.array(tdm_list, dtype=float).reshape((num_MO,num_MO), order='F'))
+                    B_out = False
+                    AB_out = False
+
+                if count == (header_line_B+num_lines) and BA_out == True:
+                    tdm_list += list(i.strip() for i in filter(None,line.split(' ')))
+                    B_BA_list.append(np.array(tdm_list, dtype=float).reshape((num_MO,num_MO), order='F'))
+                    B_out = False
+                    BA_out = False
+        
+            if C_out == True:
+            
+                if count > header_line_C and count < (header_line_C+num_lines):
+                    tdm_list += list(i.strip() for i in filter(None,line.split(' ')))
+                    
+                elif count == (header_line_C+num_lines) and AB_out == True:
+                    tdm_list += list(i.strip() for i in filter(None,line.split(' ')))
+                    C_AB_list.append(np.array(tdm_list, dtype=float).reshape((num_MO,num_MO), order='F'))
+                    C_out = False
+                    AB_out = False
+                
+                elif count == (header_line_C+num_lines) and BA_out == True:
+                    tdm_list += list(i.strip() for i in filter(None,line.split(' ')))
+                    C_BA_list.append(np.array(tdm_list, dtype=float).reshape((num_MO,num_MO), order='F'))
+                    C_out = False
+                    BA_out = False
+
+    file_content['state']['state_dm'] = np.concatenate((file_content['state']['state_dm'],ao_to_mo(CE_state_list,MO_C)))
+    file_content['transition']['block_B']['AB_tdm'] = ao_to_mo(B_AB_list,MO_C)
+    file_content['transition']['block_B']['BA_tdm'] = ao_to_mo(B_BA_list,MO_C)
+    file_content['transition']['block_C']['AB_tdm'] = ao_to_mo(C_AB_list,MO_C)
+    file_content['transition']['block_C']['BA_tdm'] = ao_to_mo(C_BA_list,MO_C)
+
+    with open(file+'-SRIXS.out','r') as f: 
+        '''
+        Saving the 1-photon output of block A (GS<->VE transitions )
+        Transition energies and transition dipole moments (A->B, B->A)
+        '''
+        for count, line in enumerate(f):
             '''
-            Saving number of states and labels
-            label_list order: GS, VE, CE
+            Saving number of valence-excited states and labels
+            label_list order: GS, VE,
             '''
             if 'Reference state properties' in line:
                 file_content['state']['state_labels'] = ['GS']
-                label_list = ['GS']
 
             elif 'Excited state properties' in line:
+                file_content['state']['state_labels'].append('VE-'+line.split('  ')[1].split(' ')[2].strip())
+                file_content['state']['num_val_states'] += 1
 
-                if 'CVS' in line:
-                    label_list.append('CE-'+line.split('  ')[1].split(' ')[2].strip())
-                    file_content['state']['state_labels'].append('CE-'+line.split('  ')[1].split(' ')[2].strip())
-                    file_content['state']['num_core_states'] += 1
-                else:
-                    label_list.append('VE-'+line.split('  ')[1].split(' ')[2].strip())
-                    file_content['state']['state_labels'].append('VE-'+line.split('  ')[1].split(' ')[2].strip())
-                    file_content['state']['num_val_states'] += 1
-
-            '''
-            Saving state density matrices
-            Matrix printed out between 'DM-S' and 'DM-E' strings.
-            Matrix lines saved temporarily in DM_state_list, then appended to DM_state at end reading.
-            DM_state list follows same ordering of label_list
-            '''
-
-            if 'DM-S' in line and 'T' not in line:
-                DM_line_count = -1
-                DM_state_list = []
-                DM_out = True
-
-            elif 'DM-E' in line and 'T' not in line:
-                DM_out = False
-                file_content['state']['state_dm'].append(ao_to_mo(C,np.array(np.array(DM_state_list).reshape((mat_dim,mat_dim)))))
-
-            if DM_out == True:
-
-                if DM_line_count >0:
-                    DM_state_list+=list(map(lambda y: float(y), filter(None,map(lambda x: x.strip(),line.split(' ')))))
-
-                DM_line_count += 1
-
-
-            #####################
-            #1-photon properties#
-            #####################
-
-            '''
-            Output of blocks A, B and C
-            Transition energies, transition density matrices and dipole moments(A->B, B->A)
-            Block A: GS<->VE transitions 
-            Block B: GS<->CE transitions
-            Block C: CE<->CE transitions
-            '''
-            
-            #BLOCKS A+B: Finding out where the blocks of the matrix output are printed out
-
-            if 'State A: ccsd:' in line:
-                block_AB = True
-
-            if block_AB == True and 'State B: eomee_ccsd/rhfref/singlets:' in line:
-                block_A = True
-                block_B = False
+            if 'State B: eomee_ccsd/rhfref/singlets:' in line:
                 file_content['transition']['block_A']['state_labels'].append('GS<->' + line.split(':')[2].strip())
-            
-            if block_AB == True and 'State B: cvs_eomee_ccsd/rhfref/singlets:' in line:
-                block_B = True
-                block_A = False
-                file_content['transition']['block_B']['state_labels'].append('GS<->' + line.split(':')[2].strip())
 
-            if 'State A: cvs_eomee_ccsd/rhfref/singlets:' in line:
-                block_AB = False
-                block_B = False
-                block_C = True
-                block_C_stateA = line.split(':')[2].strip()
-
-            if block_C == True and 'State B: cvs_eomee_ccsd/rhfref/singlets:' in line:
-                file_content['transition']['block_C']['state_labels'].append(block_C_stateA + '<->' + line.split(':')[2].strip())
-
-
-            #BLOCK A: data acquisition - transition dipoles + energies
-            
-            if block_A == True and 'Energy GAP' in line:
+            if 'Energy GAP' in line:
                 file_content['transition']['block_A']['tr_energies'].append(float(line.split('=')[2].strip().replace('eV','').strip()))
                 A_dp_line = count + 2
 
-            if block_A == True and 'A->B:' in line and count == A_dp_line:
+            if 'A->B:' in line and count == A_dp_line:
                 file_content['transition']['block_A']['AB_dipole'].append(dipole_moment_processing(line))
 
-            elif block_A == True and 'B->A:' in line and count == A_dp_line+1:
+            elif 'B->A:' in line and count == A_dp_line+1:
                 file_content['transition']['block_A']['BA_dipole'].append(dipole_moment_processing(line))
 
-            #BLOCK A: data acquisition - transition density matrices
-
-            if block_A == True and 'A->B TDM-S' in line:
-                TDM_line_count = -1  #skipping matrix header
-                TDM_temp = []
-                AB_mat_out = True
-                    
-            elif block_A == True and 'A->B TDM-E' in line:
-                AB_mat_out = False
-                file_content['transition']['block_A']['AB_tdm'].append(ao_to_mo(C,np.array(np.array(TDM_temp).reshape((mat_dim,mat_dim)))))
-
-            if block_A == True and 'B->A TDM-S' in line:
-                TDM_line_count = -1
-                TDM_temp = []
-                BA_mat_out = True
-                    
-            elif block_A == True and 'B->A TDM-E' in line:
-                BA_mat_out = False
-                file_content['transition']['block_A']['BA_tdm'].append(ao_to_mo(C,np.array(np.array(TDM_temp).reshape((mat_dim,mat_dim)))))
-
-            if block_A == True and (AB_mat_out == True or BA_mat_out == True):
-
-                if TDM_line_count > 0:
-                    TDM_temp+=list(map(lambda y: float(y), filter(None,map(lambda x: x.strip(),line.split(' ')))))
-
-                TDM_line_count += 1
-
-            #BLOCK B: data acquisition - transition dipoles + energies
-
-            if block_B == True and 'Energy GAP' in line:
-                file_content['transition']['block_B']['tr_energies'].append(float(line.split('=')[2].strip().replace('eV','').strip()))
-                B_dp_line = count + 2
-
-            if block_B == True and 'A->B:' in line and count == B_dp_line:
-                file_content['transition']['block_B']['AB_dipole'].append(dipole_moment_processing(line))
-
-            elif block_B == True and 'B->A:' in line and count == B_dp_line+1:
-                file_content['transition']['block_B']['BA_dipole'].append(dipole_moment_processing(line))
-
-            #BLOCK B: data acquisition - transition density matrices
-
-            if block_B == True and 'A->B TDM-S' in line:
-                TDM_line_count = -1
-                TDM_temp = []
-                AB_mat_out = True
-                    
-            elif block_B == True and 'A->B TDM-E' in line:
-                AB_mat_out = False
-                file_content['transition']['block_B']['AB_tdm'].append(ao_to_mo(C,np.array(np.array(TDM_temp).reshape((mat_dim,mat_dim)))))
-
-            if block_B == True and 'B->A TDM-S' in line:
-                TDM_line_count = -1
-                TDM_temp = []
-                BA_mat_out = True
-                    
-            elif block_B == True and 'B->A TDM-E' in line:
-                BA_mat_out = False
-                file_content['transition']['block_B']['BA_tdm'].append(ao_to_mo(C,np.array(np.array(TDM_temp).reshape((mat_dim,mat_dim)))))
-
-            if block_B == True and (AB_mat_out == True or BA_mat_out == True):
-
-                if TDM_line_count >0:
-                    TDM_temp+=list(map(lambda y: float(y), filter(None,map(lambda x: x.strip(),line.split(' ')))))
-
-                TDM_line_count += 1
-
-            #BLOCK C: data acquisition - transition dipoles + energies
-
-            if block_C == True and 'Energy GAP' in line:
-                file_content['transition']['block_C']['tr_energies'].append(float(line.split('=')[2].strip().replace('eV','').strip()))
-                C_dp_line = count + 2
-
-            if block_C == True and 'A->B:' in line and count == C_dp_line:
-                file_content['transition']['block_C']['AB_dipole'].append(dipole_moment_processing(line))
-
-            elif block_C == True and 'B->A:' in line and count == C_dp_line+1:
-                file_content['transition']['block_C']['BA_dipole'].append(dipole_moment_processing(line))
-
-            #BLOCK C: data acquisition - transition density matrices
-
-            if block_C == True and 'A->B TDM-S' in line:
-                TDM_line_count = -1
-                TDM_temp = []
-                AB_mat_out = True
-                    
-            elif block_C == True and 'A->B TDM-E' in line:
-                AB_mat_out = False
-                file_content['transition']['block_C']['AB_tdm'].append(ao_to_mo(C,np.array(np.array(TDM_temp).reshape((mat_dim,mat_dim)))))
-
-            if block_C == True and 'B->A TDM-S' in line:
-                TDM_line_count = -1
-                TDM_temp = []
-                BA_mat_out = True
-                    
-            elif block_C == True and 'B->A TDM-E' in line:
-                BA_mat_out = False
-                file_content['transition']['block_C']['BA_tdm'].append(ao_to_mo(C,np.array(np.array(TDM_temp).reshape((mat_dim,mat_dim)))))
-
-            if block_C == True and (AB_mat_out == True or BA_mat_out == True):
-
-                if TDM_line_count >0:
-                    TDM_temp+=list(map(lambda y: float(y), filter(None,map(lambda x: x.strip(),line.split(' ')))))
-
-                TDM_line_count += 1
-            
-            #####################
-            #2-photon properties#
-            #####################
+            #2-photon properties - REXS + RIXS output, frequency grid
 
             #GRID OUTPUT
                 
@@ -463,10 +442,64 @@ def output_parse(file):
                     tensor_temp += RIXS_TM_mod(line)
 
 
-    #Reshaping RIXS TM's to (num_val_states,omega_p,3,3) and REXS TMs to (omega_p,3,3)
-
+    #Reshaping RIXS TM's to (num_val_states, omega_p, 3, 3) and REXS TMs to (omega_p, 3, 3)
     file_content['transition']['block_A']['REXS_tm'] = np.array(file_content['transition']['block_A']['REXS_tm'],dtype='complex64').reshape(len(file_content['transition']['block_A']['RIXS_grid_p']),3,3)
     file_content['transition']['block_A']['RIXS_AB_tm'] = np.array(RIXS_TM_AB,dtype='complex64').reshape(file_content['state']['num_val_states'],len(file_content['transition']['block_A']['RIXS_grid_p']),3,3)
     file_content['transition']['block_A']['RIXS_BA_tm'] = np.array(RIXS_TM_BA,dtype='complex64').reshape(file_content['state']['num_val_states'],len(file_content['transition']['block_A']['RIXS_grid_p']),3,3)
+    
+    
+    with open(file+'-XAS.out','r') as f:
+        '''
+        1-photon output of block B (GS<->CE transitions) and C (CE<->CE transitions)
+        Transition energies and transition dipole moments (A->B, B->A)
+        ''' 
+        for count, line in enumerate(f):            
+            '''
+            Saving number of states and labels
+            label_list order: Irreducible representation, state number 
+            '''
+            if 'Excited state properties' in line:
+                file_content['state']['state_labels'].append('CE-'+line.split('  ')[1].split(' ')[2].strip())
+                file_content['state']['num_core_states'] += 1
+
+            #BLOCKS B vs C: Finding out where the blocks of the matrix output are printed out
+
+            if 'State A: ccsd:' in line:
+                block_B = True
+
+            if block_B == True and 'State B:' in line:
+                file_content['transition']['block_B']['state_labels'].append('GS<->' + line.split(':')[2].strip())
+
+            elif 'State A: cvs_eomee_ccsd/rhfref/singlets:' in line:
+                block_C = True
+                block_B = False
+                block_C_stateA = line.split(':')[2].strip()
+
+            if block_C == True and 'State B: cvs_eomee_ccsd/rhfref/singlets:' in line:
+                file_content['transition']['block_C']['state_labels'].append(block_C_stateA + '<->' + line.split(':')[2].strip())
+
+            #BLOCK B: data acquisition - transition dipoles + energies
+
+            if block_B == True and 'Energy GAP' in line:
+                file_content['transition']['block_B']['tr_energies'].append(float(line.split('=')[2].strip().replace('eV','').strip()))
+                B_dp_line = count + 2
+
+            if block_B == True and 'A->B:' in line and count == B_dp_line:
+                file_content['transition']['block_B']['AB_dipole'].append(dipole_moment_processing(line))
+
+            elif block_B == True and 'B->A:' in line and count == B_dp_line+1:
+                file_content['transition']['block_B']['BA_dipole'].append(dipole_moment_processing(line))
+
+            #BLOCK C: data acquisition - transition dipoles + energies
+
+            if block_C == True and 'Energy GAP' in line:
+                file_content['transition']['block_C']['tr_energies'].append(float(line.split('=')[2].strip().replace('eV','').strip()))
+                C_dp_line = count + 2
+
+            if block_C == True and 'A->B:' in line and count == C_dp_line:
+                file_content['transition']['block_C']['AB_dipole'].append(dipole_moment_processing(line))
+
+            elif block_C == True and 'B->A:' in line and count == C_dp_line+1:
+                file_content['transition']['block_C']['BA_dipole'].append(dipole_moment_processing(line))
 
     return file_content
