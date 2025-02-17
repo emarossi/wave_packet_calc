@@ -182,6 +182,8 @@ def output_parse(file):
                 elif count == (header_line_MO_C+num_lines):
                     MO_list += list(i.strip() for i in filter(None,line.split(' ')))
                     MO_C = np.array(MO_list, dtype=float).reshape((num_MO,num_MO), order='F')
+                    MO_list = []
+                    MO_num_out = 0
                     MO_C_out = False
 
             if 'CC State Density' in line or 'State Density' in line:
