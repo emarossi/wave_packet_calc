@@ -89,7 +89,7 @@ def output_parse(file):
     file_content = {'calc_data' :{'mat_dim': 0},
                     'state': {'state_labels' : [], 
                               'state_dm' : [],
-                              'num_val_states': 1,
+                              'num_val_states': 0,
                               'num_core_states': 0},
                     'transition': {'block_A': {'state_labels': [],
                                                'tr_energies': [],
