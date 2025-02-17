@@ -179,7 +179,7 @@ def dm_symm(dm_AB,dm_BA):
     Returns: symmetrized real-valued dm_AB; shape = (#basis_el, #basis_el)
     '''
     dm_phase = np.sign(dm_AB)
-    dm_mod = np.sqrt(np.abs(np.multiply(dm_AB, dm_BA.transpose(0,2,1)))) #need abs for imprecise numerics from Qchem which lead to negative arguments for root
+    dm_mod = np.sqrt(np.multiply(np.abs(dm_AB), np.abs(dm_BA).transpose(0,2,1))) #need abs for imprecise numerics from Qchem which lead to negative arguments for root
     return np.multiply(dm_phase,dm_mod)
 
 #Initialize 1PDM tensor
