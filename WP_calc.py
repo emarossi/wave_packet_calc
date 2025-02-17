@@ -232,7 +232,6 @@ B_en_array[0,np.arange(0,block_C_dim,1)] = np.array(qchem_out_data['transition']
 #BLOCK B - dipole array definition: shape=(GS+#valence_excited,#core_excited,3)
 B_dip_array = np.zeros((block_A_dim,block_C_dim,3))
 B_dip_array[0,np.arange(0,block_C_dim,1),:] = dip_mom_sym(qchem_out_data['transition']['block_B']['AB_dipole'],qchem_out_data['transition']['block_B']['BA_dipole'])
-print(B_dip_array[0,np.arange(0,block_C_dim,1),:])
 
 #BLOCK C: energy array definition: shape=(#core_excited,#core_excited)
 C_en_array = np.zeros((block_C_dim,block_C_dim))
