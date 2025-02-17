@@ -164,7 +164,7 @@ print('loading constants')
 
 qchem_out_data = qchem_parse.output_parse(file)
 
-block_A_dim = qchem_out_data['state']['num_val_states']+1  #adding 1 for the ground state
+block_A_dim = qchem_out_data['state']['num_val_states']
 block_C_dim = qchem_out_data['state']['num_core_states']
 
 ################
