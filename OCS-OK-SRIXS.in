@@ -60,28 +60,3 @@ $rixs
    omega_2 4194000 220 1 0
    damped_epsilon 0.0025 !Gamma/2
 $end
-
-@@@
-
-$comment
-XAS transition moments - Oxygen K-Edge
-CE state properties
-GS->CE and CE<->CE 1P transition properties
-$end
-
-$molecule
-read
-$end
-
-$rem
-  JOB_TYPE = sp
-  BASIS = 6-311+G*
-  METHOD  =  eom-ccsd
-  N_FROZEN_CORE = 2
-  SCF_GUESS = read
-  SKIP_SCFMAN = true
-  CVS_EE_STATES = [5,0,5,5] 
-  STATE_ANALYSIS = true  ! Calculation of the DMs
-  CC_TRANS_PROP = 3  ! Calculate transition properties
-  GUI = 2          ! Drop DMs into checkpoint file
-$end
