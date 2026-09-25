@@ -1,7 +1,6 @@
 cff-version: 1.0.0
 title: >-
-  Wave-packet in neutral molecule launched by an attosecond X-Ray pulse:
-  perturbative code
+  AXWP: Attosecond X-Ray Wave Packet dynamics simulation
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
